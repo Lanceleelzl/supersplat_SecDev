@@ -1,6 +1,7 @@
 import { ColorPicker, Container, Label, SliderInput } from '@playcanvas/pcui';
 import { Color } from 'playcanvas';
 
+import { Element, ElementType } from '../element';
 import { Events } from '../events';
 import { localize } from './localization';
 import { Tooltips } from './tooltips';
@@ -238,7 +239,7 @@ class ColorPanel extends Container {
         let selected: Splat = null;
         let op: SetSplatColorAdjustmentOp = null;
 
-        const updateUIFromState = (splat: Splat) => {
+        const updateUIFromState = (splat: Splat | null) => {
             if (suppress) return;
             suppress = true;
             tintPicker.value = splat ? [splat.tintClr.r, splat.tintClr.g, splat.tintClr.b] : [1, 1, 1];
@@ -393,9 +394,17 @@ class ColorPanel extends Container {
             }
         });
 
-        events.on('selection.changed', (splat) => {
-            selected = splat;
-            updateUIFromState(splat);
+        events.on('selection.changed', (element: Element) => {
+            // Only handle Splat elements for color adjustments
+            if (element && element.type === ElementType.splat) {
+                const splat = element as Splat;
+                selected = splat;
+                updateUIFromState(splat);
+            } else {
+                // For non-splat elements (like GLB models), reset to default
+                selected = null;
+                updateUIFromState(null);
+            }
         });
 
         events.on('splat.tintClr', updateUIFromState);

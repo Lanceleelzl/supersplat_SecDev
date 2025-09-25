@@ -31,15 +31,37 @@
         <!-- Service worker -->
         <script>
             const sw = navigator.serviceWorker;
-            if (sw) {
+            // Only register service worker in production (when not served from localhost)
+            const isProduction = !location.hostname.includes('localhost') && !location.hostname.includes('127.0.0.1');
+            
+            if (sw && isProduction) {
                 sw.register('./sw.js')
                     .then(reg => console.log('service worker registered', reg))
                     .catch(err => console.log('failed to register service worker', err));
+            } else {
+                console.log('Service worker disabled in development mode');
+                // Clear any existing service workers in development
+                if (sw) {
+                    sw.getRegistrations().then(registrations => {
+                        registrations.forEach(registration => {
+                            console.log('Unregistering service worker for development');
+                            registration.unregister();
+                        });
+                    });
+                }
             }
         </script>
     </head>
 
     <body>
-        <script type="module" src="./index.js"></script>
+        <script>
+            // Force cache busting in development mode
+            const isDev = location.hostname.includes('localhost') || location.hostname.includes('127.0.0.1');
+            const timestamp = isDev ? '?v=' + Date.now() : '';
+            const script = document.createElement('script');
+            script.type = 'module';
+            script.src = './index.js' + timestamp;
+            document.head.appendChild(script);
+        </script>
     </body>
 </html>

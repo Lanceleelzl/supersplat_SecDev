@@ -1,6 +1,7 @@
-import { AppBase, Asset, GSplatData, GSplatResource } from 'playcanvas';
+import { AppBase, Asset, GSplatData, GSplatResource, ContainerResource, Entity, CULLFACE_NONE, Color } from 'playcanvas';
 
 import { Events } from './events';
+import { GltfModel } from './gltf-model';
 import { Splat } from './splat';
 
 interface ModelLoadRequest {
@@ -215,12 +216,168 @@ class AssetLoader {
         }
     }
 
+    loadGltf(loadRequest: ModelLoadRequest) {
+        this.events.fire('startSpinner');
+
+        return new Promise<GltfModel>((resolve, reject) => {
+            const asset = new Asset(loadRequest.filename || loadRequest.url, 'container', {
+                url: loadRequest.url,
+                filename: loadRequest.filename
+            });
+
+            if (loadRequest.contents) {
+                // Create blob URL for the file contents
+                const blob = new Blob([loadRequest.contents], {
+                    type: loadRequest.filename?.endsWith('.glb') ? 'model/gltf-binary' : 'model/gltf+json'
+                });
+                asset.file = {
+                    url: URL.createObjectURL(blob),
+                    filename: loadRequest.filename || 'model.gltf'
+                };
+            }
+
+            asset.on('load', () => {
+                try {
+                    // Create an entity to hold the glTF model
+                    const containerResource = asset.resource as ContainerResource;
+                    const entity = containerResource.instantiateRenderEntity();
+                    entity.name = loadRequest.filename || loadRequest.url || 'glTF Model';
+                    
+                    // Add to the scene root
+                    this.app.root.addChild(entity);
+                    
+                    // Add basic lighting if not present
+                    this.ensureBasicLighting();
+                    
+                    // Configure lighting for the model
+                    this.configureMaterialsForLighting(entity);
+                    
+                    const gltfModel = new GltfModel(asset, entity);
+                    // 若当前还没有加入 scene.elements，需要显式加入
+                    // 加入 Scene.elements 的职责应在外层统一处理；这里通过事件让主场景监听添加
+                    // 外层（例如 main / editor 初始化）可监听 'model.loaded.gltf' 并调用 scene.add(gltfModel)
+                    // Initialize physics picking collider (non-fatal if unavailable)
+                    try {
+                        (gltfModel as any).setupPhysicsPicking?.();
+                    } catch (e) {
+                        console.warn('Physics picking setup failed (non-fatal):', e);
+                    }
+                    
+                    // Auto-focus camera on the newly loaded model
+                    const bound = gltfModel.worldBound;
+                    if (bound) {
+                        // Add event listener for when the model is added to scene
+                        this.events.once('scene.elementAdded', (element: any) => {
+                            if (element === gltfModel) {
+                                // Get scene from the element
+                                const scene = element.scene;
+                                if (scene && scene.camera) {
+                                    scene.camera.focus({
+                                        focalPoint: bound.center,
+                                        radius: bound.halfExtents.length(),
+                                        speed: 1
+                                    });
+                                    console.log('Auto-focused camera on glTF model');
+                                }
+                            }
+                        });
+                    }
+                    
+                    // 通过事件通知外部逻辑将该元素加入 Scene（若外层未自动处理）
+                    try {
+                        this.events.fire('model.loaded.gltf', gltfModel);
+                    } catch { /* ignore */ }
+                    resolve(gltfModel);
+                } catch (error) {
+                    reject(new Error(`Failed to instantiate glTF model: ${error.message}`));
+                }
+            });
+
+            asset.on('error', (err: string) => {
+                reject(new Error(`Failed to load glTF model: ${err}`));
+            });
+
+            this.app.assets.add(asset);
+            this.app.assets.load(asset);
+        }).finally(() => {
+            if (!loadRequest.animationFrame) {
+                this.events.fire('stopSpinner');
+            }
+        });
+    }
+
     loadModel(loadRequest: ModelLoadRequest) {
         const filename = (loadRequest.filename || loadRequest.url).toLowerCase();
+        console.log('loadModel called with filename:', filename);
+        
         if (filename.endsWith('.splat')) {
+            console.log('Loading as splat file');
             return this.loadSplat(loadRequest);
+        } else if (filename.endsWith('.gltf') || filename.endsWith('.glb')) {
+            console.log('Loading as glTF/GLB file');
+            return this.loadGltf(loadRequest);
         }
+        console.log('Loading as PLY file');
         return this.loadPly(loadRequest);
+    }
+
+    private ensureBasicLighting() {
+        // Check if there's already lighting
+        const existingLights = this.app.root.findComponents('light');
+        const hasLight = existingLights.length > 0;
+        
+        if (!hasLight) {
+            console.log('Adding basic lighting for glTF models');
+            
+            // Create a single directional light
+            const mainLight = new Entity('DirectionalLight');
+            mainLight.addComponent('light', {
+                type: 'directional',
+                color: [1, 1, 1],
+                intensity: 1.0,
+                castShadows: false
+            });
+            mainLight.setPosition(10, 10, 10);
+            mainLight.lookAt(0, 0, 0);
+            this.app.root.addChild(mainLight);
+            
+            // Set scene ambient light for overall illumination
+            this.app.scene.ambientLight = new Color(0.4, 0.4, 0.4);
+        }
+    }
+
+    private configureMaterialsForLighting(entity: any) {
+        // Find all render components and configure their materials
+        const renderComponents = entity.findComponents('render');
+        renderComponents.forEach((render: any) => {
+            if (render.meshInstances) {
+                render.meshInstances.forEach((meshInstance: any) => {
+                    const material = meshInstance.material;
+                    if (material) {
+                        // Ensure materials can receive lighting
+                        if (material.unlit === undefined) {
+                            material.unlit = false;
+                        }
+                        
+                        // Enable double-sided rendering to fix black backfaces
+                        material.twoSidedLighting = true;
+                        material.cull = CULLFACE_NONE; // Disable backface culling
+                        
+                        // Ensure proper lighting model
+                        if (material.shadingModel === undefined) {
+                            material.shadingModel = 1; // SPECULARGLOSINESS
+                        }
+                        
+                        // Add some ambient lighting if the material is too dark
+                        if (!material.ambient) {
+                            material.ambient = [0.2, 0.2, 0.2];
+                        }
+                        
+                        material.update();
+                    }
+                });
+            }
+        });
     }
 }
 

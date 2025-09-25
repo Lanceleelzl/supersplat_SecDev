@@ -13,6 +13,7 @@ import {
 } from 'playcanvas';
 
 import { Element, ElementType } from './element';
+import { GltfModel } from './gltf-model';
 import { vertexShader, fragmentShader } from './shaders/outline-shader';
 import { Splat } from './splat';
 
@@ -37,12 +38,23 @@ class Outline extends Element {
         const layerId = this.scene.overlayLayer.id;
 
         // add selected splat to outline layer
-        this.scene.events.on('selection.changed', (splat: Splat, prev: Splat) => {
-            if (prev) {
-                prev.entity.gsplat.layers = prev.entity.gsplat.layers.filter(id => id !== layerId);
+        this.scene.events.on('selection.changed', (element: Splat | GltfModel, prev: Splat | GltfModel) => {
+            // Remove previous selection from outline layer
+            if (prev && prev.type === ElementType.splat) {
+                const prevSplat = prev as Splat;
+                prevSplat.entity.gsplat.layers = prevSplat.entity.gsplat.layers.filter(id => id !== layerId);
+            } else if (prev && prev.type === ElementType.model) {
+                const prevModel = prev as GltfModel;
+                this.removeModelFromOutlineLayer(prevModel, layerId);
             }
-            if (splat) {
+            
+            // Add current selection to outline layer
+            if (element && element.type === ElementType.splat) {
+                const splat = element as Splat;
                 splat.entity.gsplat.layers = splat.entity.gsplat.layers.concat([layerId]);
+            } else if (element && element.type === ElementType.model) {
+                const model = element as GltfModel;
+                this.addModelToOutlineLayer(model, layerId);
             }
         });
 
@@ -93,6 +105,45 @@ class Outline extends Element {
 
     remove() {
         this.scene.camera.entity.removeChild(this.entity);
+    }
+
+    // Add GLB model to outline layer for highlighting
+    addModelToOutlineLayer(model: GltfModel, layerId: number) {
+        if (model.entity) {
+            this.setEntityOutlineLayer(model.entity, layerId, true);
+        }
+    }
+
+    // Remove GLB model from outline layer
+    removeModelFromOutlineLayer(model: GltfModel, layerId: number) {
+        if (model.entity) {
+            this.setEntityOutlineLayer(model.entity, layerId, false);
+        }
+    }
+
+    // Recursively set outline layer for entity and its children
+    private setEntityOutlineLayer(entity: Entity, layerId: number, add: boolean) {
+        // Handle render components
+        if (entity.render && entity.render.meshInstances) {
+            entity.render.meshInstances.forEach((meshInstance: any) => {
+                if (add) {
+                    // Add to outline layer if not already there
+                    if (!meshInstance.layer || meshInstance.layer.indexOf(layerId) === -1) {
+                        meshInstance.layer = meshInstance.layer ? [...meshInstance.layer, layerId] : [layerId];
+                    }
+                } else {
+                    // Remove from outline layer
+                    if (meshInstance.layer) {
+                        meshInstance.layer = meshInstance.layer.filter((id: number) => id !== layerId);
+                    }
+                }
+            });
+        }
+
+        // Recursively handle children
+        entity.children.forEach((child: Entity) => {
+            this.setEntityOutlineLayer(child, layerId, add);
+        });
     }
 
     onPreRender() {

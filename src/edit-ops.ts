@@ -194,29 +194,29 @@ class ResetOp extends StateOp {
     }
 }
 
-// op for modifying a splat transform
+// op for modifying a splat or model transform
 class EntityTransformOp {
     name = 'entityTransform';
-    splat: Splat;
+    target: Splat | any; // any for GltfModel to avoid circular dependency
     oldt: Transform;
     newt: Transform;
 
-    constructor(options: { splat: Splat, oldt: Transform, newt: Transform }) {
-        this.splat = options.splat;
+    constructor(options: { target: Splat | any, oldt: Transform, newt: Transform }) {
+        this.target = options.target;
         this.oldt = options.oldt;
         this.newt = options.newt;
     }
 
     do() {
-        this.splat.move(this.newt.position, this.newt.rotation, this.newt.scale);
+        this.target.move(this.newt.position, this.newt.rotation, this.newt.scale);
     }
 
     undo() {
-        this.splat.move(this.oldt.position, this.oldt.rotation, this.oldt.scale);
+        this.target.move(this.oldt.position, this.oldt.rotation, this.oldt.scale);
     }
 
     destroy() {
-        this.splat = null;
+        this.target = null;
         this.oldt = null;
         this.newt = null;
     }

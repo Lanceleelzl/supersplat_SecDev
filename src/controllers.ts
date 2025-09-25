@@ -1,6 +1,7 @@
 import { Vec3 } from 'playcanvas';
 
 import { Camera } from './camera';
+// Removed unused ElementType / GltfModel imports after simplifying picking logic
 
 const fromWorldPoint = new Vec3();
 const toWorldPoint = new Vec3();
@@ -158,13 +159,19 @@ class PointerController {
             event.preventDefault();
         };
 
+        // 双击事件已禁用，只使用单击选择
         // FIXME: safari sends canvas as target of dblclick event but chrome sends the target element
-        const canvas = camera.scene.app.graphicsDevice.canvas;
+        // const canvas = camera.scene.app.graphicsDevice.canvas;
+        // const dblclick = (event: globalThis.MouseEvent) => {
+        //     if (event.target === target || event.target === canvas) {
+        //         camera.pickFocalPoint(event.offsetX, event.offsetY);
+        //     }
+        // };
 
-        const dblclick = (event: globalThis.MouseEvent) => {
-            if (event.target === target || event.target === canvas) {
-                camera.pickFocalPoint(event.offsetX, event.offsetY);
-            }
+        // 单击：拾取 GLB 或 splat 并选中（GLB 不自动移动相机，splat 维持原来逻辑）
+        const click = (event: globalThis.MouseEvent) => {
+            console.log('🖱️ PICK attempt', { x: event.offsetX, y: event.offsetY });
+            camera.pickFocalPoint(event.offsetX, event.offsetY);
         };
 
         // key state
@@ -219,7 +226,8 @@ class PointerController {
         wrap(target, 'pointerup', pointerup);
         wrap(target, 'pointermove', pointermove);
         wrap(target, 'wheel', wheel, { passive: false });
-        wrap(target, 'dblclick', dblclick);
+        // wrap(target, 'dblclick', dblclick); // 禁用双击事件，只使用单击选择
+        wrap(target, 'click', click);
         wrap(document, 'keydown', keydown);
         wrap(document, 'keyup', keyup);
 

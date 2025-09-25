@@ -3,6 +3,7 @@ import { Container, Label, Element as PcuiElement, TextInput } from '@playcanvas
 import { SplatRenameOp } from '../edit-ops';
 import { Element, ElementType } from '../element';
 import { Events } from '../events';
+import { GltfModel } from '../gltf-model';
 import { Splat } from '../splat';
 import deleteSvg from './svg/delete.svg';
 import hiddenSvg from './svg/hidden.svg';
@@ -173,7 +174,7 @@ class SplatList extends Container {
 
         super(args);
 
-        const items = new Map<Splat, SplatItem>();
+        const items = new Map<Element, SplatItem>();
 
         // edit input used during renames
         const edit = new TextInput({
@@ -201,21 +202,44 @@ class SplatList extends Container {
                 item.on('rename', (value: string) => {
                     events.fire('edit.add', new SplatRenameOp(splat, value));
                 });
+            } else if (element.type === ElementType.model) {
+                const model = element as GltfModel;
+                const item = new SplatItem(model.filename, edit);
+                this.append(item);
+                items.set(model, item);
+
+                item.on('visible', () => {
+                    if (model.entity) {
+                        model.visible = true;
+                    }
+
+                    // also select it if there is no other selection
+                    if (!events.invoke('selection')) {
+                        events.fire('selection', model);
+                    }
+                });
+                item.on('invisible', () => {
+                    if (model.entity) {
+                        model.visible = false;
+                    }
+                });
+                item.on('removeClicked', () => {
+                    model.destroy();
+                });
             }
         });
 
         events.on('scene.elementRemoved', (element: Element) => {
-            if (element.type === ElementType.splat) {
-                const splat = element as Splat;
-                const item = items.get(splat);
+            if (element.type === ElementType.splat || element.type === ElementType.model) {
+                const item = items.get(element);
                 if (item) {
                     this.remove(item);
-                    items.delete(splat);
+                    items.delete(element);
                 }
             }
         });
 
-        events.on('selection.changed', (selection: Splat) => {
+        events.on('selection.changed', (selection: Splat | GltfModel) => {
             items.forEach((value, key) => {
                 value.selected = key === selection;
             });
@@ -235,6 +259,13 @@ class SplatList extends Container {
             }
         });
 
+        events.on('model.visibility', (model: GltfModel) => {
+            const item = items.get(model);
+            if (item) {
+                item.visible = model.visible;
+            }
+        });
+
         this.on('click', (item: SplatItem) => {
             for (const [key, value] of items) {
                 if (item === value) {
@@ -245,26 +276,30 @@ class SplatList extends Container {
         });
 
         this.on('removeClicked', async (item: SplatItem) => {
-            let splat;
+            let element;
             for (const [key, value] of items) {
                 if (item === value) {
-                    splat = key;
+                    element = key;
                     break;
                 }
             }
 
-            if (!splat) {
+            if (!element) {
                 return;
             }
 
+            const elementName = element.type === ElementType.splat ?
+                (element as Splat).name :
+                (element as GltfModel).filename;
+
             const result = await events.invoke('showPopup', {
                 type: 'yesno',
-                header: 'Remove Splat',
-                message: `Are you sure you want to remove '${splat.name}' from the scene? This operation can not be undone.`
+                header: `Remove ${element.type === ElementType.splat ? 'Splat' : 'Model'}`,
+                message: `Are you sure you want to remove '${elementName}' from the scene? This operation can not be undone.`
             });
 
             if (result?.action === 'yes') {
-                splat.destroy();
+                element.destroy();
             }
         });
     }

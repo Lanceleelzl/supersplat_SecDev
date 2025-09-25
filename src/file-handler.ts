@@ -48,6 +48,13 @@ const filePickerTypes: { [key: string]: FilePickerAcceptType } = {
             'application/x-gaussian-splat': ['.splat']
         }
     },
+    'gltf': {
+        description: 'glTF 3D Model',
+        accept: {
+            'model/gltf+json': ['.gltf'],
+            'model/gltf-binary': ['.glb']
+        }
+    },
     'htmlViewer': {
         description: 'Viewer HTML',
         accept: {
@@ -140,6 +147,8 @@ const loadCameraPoses = async (file: ImportFile, events: Events) => {
 
 // initialize file handler events
 const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) => {
+    console.log('Debug: initFileHandler called - GLB support should be available');
+    console.log('Debug: filePickerTypes includes:', Object.keys(filePickerTypes));
 
     const showLoadError = async (message: string, filename: string) => {
         await events.invoke('showPopup', {
@@ -200,7 +209,11 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
 
     // figure out what the set of files are (ply sequence, document, sog set, ply) and then import them
     const importFiles = async (files: ImportFile[], animationFrame = false) => {
-        const filenames = files.map(f => f.filename.toLocaleLowerCase());
+        console.log('🔥 DEBUG: importFiles called with:', files);
+        const filenames = files.map(f => f.filename.toLowerCase());
+        
+        console.log('Importing files:', files.map(f => f.filename));
+        console.log('Lowercase filenames:', filenames);
 
         const result = [];
 
@@ -215,7 +228,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             // check for unrecognized file types
             for (let i = 0; i < filenames.length; i++) {
                 const filename = filenames[i];
-                if (!filename.endsWith('.ssproj') && !filename.endsWith('.json') && !filename.endsWith('.ply') && !filename.endsWith('.splat') && !filename.endsWith('.sog') && !filename.endsWith('.webp')) {
+                if (!filename.endsWith('.ssproj') && !filename.endsWith('.json') && !filename.endsWith('.ply') && !filename.endsWith('.splat') && !filename.endsWith('.sog') && !filename.endsWith('.webp') && !filename.endsWith('.gltf') && !filename.endsWith('.glb')) {
                     await showLoadError('Unrecognized file type', filename);
                     return;
                 }
@@ -228,6 +241,8 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
                 } else if (filenames[i].endsWith('.json')) {
                     await importCameraPoses(files[i]);
                 } else if (filenames[i].endsWith('.ply') || filenames[i].endsWith('.splat') || filenames[i].endsWith('.sog')) {
+                    result.push(await importFile(files[i], animationFrame));
+                } else if (filenames[i].endsWith('.gltf') || filenames[i].endsWith('.glb')) {
                     result.push(await importFile(files[i], animationFrame));
                 }
             }
@@ -243,16 +258,20 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
     // create a file selector element as fallback when showOpenFilePicker isn't available
     let fileSelector: HTMLInputElement;
     if (!window.showOpenFilePicker) {
+        console.log('Debug: Creating fallback file selector element');
         fileSelector = document.createElement('input');
         fileSelector.setAttribute('id', 'file-selector');
         fileSelector.setAttribute('type', 'file');
-        fileSelector.setAttribute('accept', '.ply,.splat,meta.json,.json,.webp,.ssproj,.sog');
+        fileSelector.setAttribute('accept', '.ply,.splat,meta.json,.json,.webp,.ssproj,.sog,.gltf,.glb');
         fileSelector.setAttribute('multiple', 'true');
+        console.log('Debug: File selector accept attribute set to:', fileSelector.getAttribute('accept'));
 
         fileSelector.onchange = () => {
+            console.log('Debug: File selector change event triggered');
             const files = [];
             for (let i = 0; i < fileSelector.files.length; i++) {
                 const file = fileSelector.files[i];
+                console.log('Debug: Selected file:', file.name, 'type:', file.type);
                 files.push({
                     filename: file.name,
                     contents: file
@@ -262,10 +281,13 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
             fileSelector.value = '';
         };
         document.body.append(fileSelector);
+        console.log('Debug: File selector element appended to body');
+    } else {
+        console.log('Debug: Native showOpenFilePicker API available, no fallback needed');
     }
 
     // create the file drag & drop handler
-    CreateDropHandler(dropTarget, (entries, shift) => {
+    CreateDropHandler(dropTarget, (entries, _shift) => {
         importFiles(entries.map((e) => {
             return {
                 filename: e.filename,
@@ -294,17 +316,25 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
     });
 
     events.function('scene.import', async () => {
+        console.log('Debug: scene.import event triggered');
+        console.log('Debug: fileSelector exists:', !!fileSelector);
+        console.log('Debug: showOpenFilePicker available:', !!window.showOpenFilePicker);
+        
         if (fileSelector) {
+            console.log('Debug: Using fileSelector element, accept attr:', fileSelector.getAttribute('accept'));
             fileSelector.click();
         } else {
             try {
+                console.log('Debug: Using showOpenFilePicker API');
+                console.log('Debug: gltf picker type:', filePickerTypes.gltf);
                 const handles = await window.showOpenFilePicker({
                     id: 'SuperSplatFileImport',
                     multiple: true,
                     types: [
                         filePickerTypes.ply,
                         filePickerTypes.splat,
-                        filePickerTypes.sog
+                        filePickerTypes.sog,
+                        filePickerTypes.gltf
                     ]
                 });
 

@@ -1,5 +1,7 @@
+import { ElementType } from './element';
 import { EntityTransformHandler } from './entity-transform-handler';
 import { Events } from './events';
+import { GltfModel } from './gltf-model';
 import { registerPivotEvents } from './pivot';
 import { Splat } from './splat';
 import { SplatsTransformHandler } from './splats-transform-handler';
@@ -26,15 +28,19 @@ const registerTransformHandlerEvents = (events: Events) => {
     const entityTransformHandler = new EntityTransformHandler(events);
     const splatsTransformHandler = new SplatsTransformHandler(events);
 
-    const update = (splat: Splat) => {
-        if (!splat) {
+    const update = (selection: Splat | GltfModel) => {
+        if (!selection) {
             setTransformHandler(null);
-        } else {
+        } else if (selection.type === ElementType.splat) {
+            const splat = selection as Splat;
             if (splat.numSelected > 0) {
                 setTransformHandler(splatsTransformHandler);
             } else {
                 setTransformHandler(entityTransformHandler);
             }
+        } else if (selection.type === ElementType.model) {
+            // GLB models use entity transform handler
+            setTransformHandler(entityTransformHandler);
         }
     };
 

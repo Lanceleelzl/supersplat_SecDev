@@ -13,6 +13,7 @@ import {
 } from 'playcanvas';
 
 import { ElementType, Element } from './element';
+import { GltfModel } from './gltf-model';
 import { vertexShader, fragmentShader } from './shaders/splat-overlay-shader';
 import { Splat } from './splat';
 
@@ -42,12 +43,13 @@ class SplatOverlay extends Element {
 
         const events = this.scene.events;
 
-        const update = (splat: Splat) => {
-            if (!splat) {
+        const update = (element: Splat | GltfModel) => {
+            if (!element || element.type !== ElementType.splat) {
                 meshInstance.node = null;
                 return;
             }
 
+            const splat = element as Splat;
             const splatData = splat.splatData;
 
             const vertexFormat = new VertexFormat(device, [{
@@ -91,7 +93,7 @@ class SplatOverlay extends Element {
             this.splat = splat;
         };
 
-        events.on('selection.changed', (selection: Splat) => {
+        events.on('selection.changed', (selection: Splat | GltfModel) => {
             update(selection);
         });
 

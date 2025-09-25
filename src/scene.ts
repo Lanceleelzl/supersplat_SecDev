@@ -237,6 +237,9 @@ class Scene {
             element.add();
             this.elements.push(element);
 
+            // mark scene bound as dirty when adding new elements
+            this.boundDirty = true;
+
             // notify all elements of scene addition
             this.forEachElement(e => e !== element && e.onAdded(element));
 
@@ -250,6 +253,9 @@ class Scene {
         if (element.scene === this) {
             // remove from list
             this.elements.splice(this.elements.indexOf(element), 1);
+
+            // mark scene bound as dirty when removing elements
+            this.boundDirty = true;
 
             // notify listeners
             this.events.fire('scene.elementRemoved', element);

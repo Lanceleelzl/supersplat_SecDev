@@ -1,7 +1,7 @@
 import { Mat4, Quat, Vec3 } from 'playcanvas';
 
 import { PlacePivotOp, EntityTransformOp, MultiOp } from './edit-ops';
-import { ElementType } from './element';
+import { Element, ElementType } from './element';
 import { Events } from './events';
 import { GltfModel } from './gltf-model';
 import { Pivot } from './pivot';
@@ -23,7 +23,7 @@ class EntityTransformHandler implements TransformHandler {
     constructor(events: Events) {
         this.events = events;
 
-        events.on('pivot.started', (_pivot: Pivot) => {
+        events.on('pivot.started', (pivot: Pivot) => {
             if (this.target) {
                 this.start();
             }
@@ -35,13 +35,13 @@ class EntityTransformHandler implements TransformHandler {
             }
         });
 
-        events.on('pivot.ended', (_pivot: Pivot) => {
+        events.on('pivot.ended', (pivot: Pivot) => {
             if (this.target) {
                 this.end();
             }
         });
 
-        events.on('pivot.origin', (_mode: 'center' | 'boundCenter') => {
+        events.on('pivot.origin', (mode: 'center' | 'boundCenter') => {
             if (this.target) {
                 this.placePivot();
             }

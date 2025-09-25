@@ -26,6 +26,7 @@ import {
 
 import { PointerController } from './controllers';
 import { Element, ElementType } from './element';
+import { GltfModel } from './gltf-model';
 import { Serializer } from './serializer';
 import { Splat } from './splat';
 import { TweenValue } from './tween-value';
@@ -54,6 +55,7 @@ const va = new Vec3();
 const mod = (n: number, m: number) => ((n % m) + m) % m;
 
 class Camera extends Element {
+    static debugPick = false; // 默认关闭拾取调试，需时设为 true
     controller: PointerController;
     entity: Entity;
     focalPointTween = new TweenValue({ x: 0, y: 0.5, z: 0 });
@@ -453,14 +455,28 @@ class Camera extends Element {
         vec.sub2(bound.center, cameraPosition);
         const dist = vec.dot(forwardVec);
 
+        // Use more conservative clipping planes for better compatibility with various model sizes
         if (dist > 0) {
-            this.far = dist + boundRadius;
-            // if camera is placed inside the sphere bound calculate near based far
-            this.near = Math.max(1e-6, dist < boundRadius ? this.far / (1024 * 16) : dist - boundRadius);
+            // Set far plane with some extra margin
+            this.far = Math.max(boundRadius * 4, dist + boundRadius * 2);
+            
+            // Calculate near plane more carefully
+            if (dist < boundRadius) {
+                // Camera is inside or very close to the bounding sphere
+                this.near = Math.max(0.001, boundRadius / 10000);
+            } else {
+                // Camera is outside the bounding sphere
+                this.near = Math.max(0.001, Math.min(dist - boundRadius, boundRadius / 100));
+            }
         } else {
-            // if the scene is behind the camera
-            this.far = boundRadius * 2;
-            this.near = this.far / (1024 * 16);
+            // Scene is behind the camera - use generous bounds
+            this.far = boundRadius * 6;
+            this.near = Math.max(0.001, boundRadius / 10000);
+        }
+        
+        // Ensure near is always smaller than far
+        if (this.near >= this.far) {
+            this.near = this.far / 1000;
         }
     }
 
@@ -523,6 +539,310 @@ class Camera extends Element {
         const sx = screenX / target.clientWidth * scene.targetSize.width;
         const sy = screenY / target.clientHeight * scene.targetSize.height;
 
+        // =============================
+        // Step 0: Physics-based raycast (if physics components are present)
+        // 优先使用物理系统的精确射线检测（可与复杂 mesh collider 搭配）。
+        // 若失败或物理未初始化，则继续后续 AABB / fallback / splat 逻辑。
+        // =============================
+        try {
+            const cam = this.entity.camera;
+            const dpr = window.devicePixelRatio || 1;
+            const scaledX = screenX * dpr;
+            const scaledY = screenY * dpr;
+            const nearPoint = new Vec3();
+            const farPoint = new Vec3();
+            cam.screenToWorld(scaledX, scaledY, cam.nearClip, nearPoint);
+            cam.screenToWorld(scaledX, scaledY, cam.farClip, farPoint);
+            const physicsRayDir = farPoint.clone().sub(nearPoint).normalize();
+            // Construct a physics ray using pc.Ray if available (avoid shadowing existing Ray import if types differ)
+            // @ts-ignore
+            const pcAny: any = (window as any).pc;
+            if (pcAny && pcAny.Ray) {
+                const ray = new pcAny.Ray(nearPoint, physicsRayDir);
+                const result: any = {};
+                if (pcAny.app?.systems?.rigidbody?.raycastFirst) {
+                    const hit = pcAny.app.systems.rigidbody.raycastFirst(ray, result);
+                    if (!hit && (scene as any).app?.systems?.rigidbody?.raycastFirst) {
+                        // fallback to scene app reference if global pc.app not set
+                        const hit2 = (scene as any).app.systems.rigidbody.raycastFirst(ray, result);
+                        if (hit2) {
+                            if (result?.entity?.tags?.has('pickable')) {
+                                const modelEnt = result.entity;
+                                // ascend to find _gltfModel reference
+                                let cur = modelEnt as any;
+                                let foundModel: GltfModel = null;
+                                while (cur && !foundModel) {
+                                    if (cur._gltfModel) foundModel = cur._gltfModel as GltfModel;
+                                    cur = cur.parent;
+                                }
+                                if (foundModel) {
+                                    if (Camera.debugPick) {
+                                        console.log('🎯 Physics Raycast 命中 (fallback app)', { model: foundModel.filename });
+                                    }
+                                    scene.events.fire('camera.focalPointPicked', {
+                                        camera: this,
+                                        model: foundModel,
+                                        position: result.point ? result.point.clone?.() || result.point : nearPoint
+                                    });
+                                    return;
+                                }
+                            }
+                        }
+                    } else if (hit) {
+                        if (result?.entity?.tags?.has('pickable')) {
+                            const modelEnt = result.entity;
+                            let cur = modelEnt as any;
+                            let foundModel: GltfModel = null;
+                            while (cur && !foundModel) {
+                                if (cur._gltfModel) foundModel = cur._gltfModel as GltfModel;
+                                cur = cur.parent;
+                            }
+                            if (foundModel) {
+                                if (Camera.debugPick) {
+                                    console.log('🎯 Physics Raycast 命中', { model: foundModel.filename });
+                                }
+                                scene.events.fire('camera.focalPointPicked', {
+                                    camera: this,
+                                    model: foundModel,
+                                    position: result.point ? result.point.clone?.() || result.point : nearPoint
+                                });
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            if (Camera.debugPick) {
+                console.warn('⚠️ Physics raycast 失败或未初始化', e);
+            }
+        }
+        // First: GLB 模型拾取（多阶段）
+        // 阶段顺序：
+        // 1) meshInstance 局部 AABB -> world 转换后逐一射线测试（更精细）
+        // 2) 模型整体聚合 worldBound AABB 测试（粗略）
+        // 3) 中心投影 fallback
+        const gltfModels = scene.getElementsByType(ElementType.model);
+        if (!gltfModels.length) {
+            // 仅提示一次（可选：放入静态集合避免骚扰，这里简单输出）
+            console.warn('[Picking] 没有可用的 GLB 模型元素 (ElementType.model)。请确认已调用 scene.add(gltfModel)');
+        }
+        let pickedModel: GltfModel = null;
+        let pickedPoint: Vec3 = null;
+        let pickedDistance = Number.POSITIVE_INFINITY;
+
+        if (gltfModels.length > 0) {
+            const cam = this.entity.camera;
+            const nearPoint = new Vec3();
+            const farPoint = new Vec3();
+
+            // 统一使用渲染目标尺寸 (考虑 DPR) 的转换
+            // PlayCanvas 的 camera.screenToWorld 期望的是相对 canvas 的屏幕坐标（像素）
+            // 但我们有可能在高 DPI 下使用 clientWidth / clientHeight 逻辑，故确保一致性
+            const dpr = window.devicePixelRatio || 1;
+            const scaledX = screenX * dpr;
+            const scaledY = screenY * dpr;
+
+            cam.screenToWorld(scaledX, scaledY, cam.nearClip, nearPoint);
+            cam.screenToWorld(scaledX, scaledY, cam.farClip, farPoint);
+
+            const rayDir = farPoint.sub(nearPoint).normalize();
+            const pickRay = new Ray(nearPoint, rayDir);
+
+            // Debug 可视化：绘制射线
+            if (Camera.debugPick) {
+                try {
+                    const app: any = (scene as any).app;
+                    const lineEnd = nearPoint.clone().add(rayDir.clone().mulScalar(1000));
+                    app?.drawLine?.(nearPoint, lineEnd, new (window as any).pc.Color(1, 1, 0, 1));
+                } catch { /* ignore visualization errors */ }
+            }
+
+            // 记录调试信息
+            if (Camera.debugPick) {
+                console.log('🎯 GLB Picking Ray', {
+                    screen: { x: screenX, y: screenY, scaledX, scaledY, dpr },
+                    near: nearPoint.toString(),
+                    dir: rayDir.toString(),
+                    modelCount: gltfModels.length
+                });
+            }
+
+            const modelBounds: { model: GltfModel, bound: any }[] = [];
+
+            // --- 阶段 1: meshInstance 级 AABB 拾取 ---
+            for (let i = 0; i < gltfModels.length; i++) {
+                const model = gltfModels[i] as GltfModel;
+                if (!model.visible || !model.entity?.enabled) continue;
+                const renderComponents: any[] = model.entity.findComponents('render') as any;
+                for (const render of renderComponents) {
+                    const meshInstances: any[] = (render as any).meshInstances || [];
+                    for (const mi of meshInstances) {
+                        if (!mi?.aabb || !mi?.node) continue;
+                        // world 变换
+                        const worldAabb = new BoundingBox();
+                        worldAabb.setFromTransformedAabb(mi.aabb, mi.node.getWorldTransform());
+                        const ip = new Vec3();
+                        if (Camera.debugPick) {
+                            // 画出 meshInstance AABB（线框）
+                            try {
+                                const app: any = (scene as any).app;
+                                const bbMin = worldAabb.getMin();
+                                const bbMax = worldAabb.getMax();
+                                const corners = [
+                                    new Vec3(bbMin.x, bbMin.y, bbMin.z),
+                                    new Vec3(bbMax.x, bbMin.y, bbMin.z),
+                                    new Vec3(bbMax.x, bbMax.y, bbMin.z),
+                                    new Vec3(bbMin.x, bbMax.y, bbMin.z),
+                                    new Vec3(bbMin.x, bbMin.y, bbMax.z),
+                                    new Vec3(bbMax.x, bbMin.y, bbMax.z),
+                                    new Vec3(bbMax.x, bbMax.y, bbMax.z),
+                                    new Vec3(bbMin.x, bbMax.y, bbMax.z)
+                                ];
+                                const color = new (window as any).pc.Color(0, 0.6, 1, 1);
+                                const drawE = (a: number, b: number) => app?.drawLine?.(corners[a], corners[b], color);
+                                drawE(0, 1); drawE(1, 2); drawE(2, 3); drawE(3, 0); // bottom
+                                drawE(4, 5); drawE(5, 6); drawE(6, 7); drawE(7, 4); // top
+                                drawE(0, 4); drawE(1, 5); drawE(2, 6); drawE(3, 7); // pillars
+                            } catch { /* ignore aabb visualization errors */ }
+                        }
+                        if (worldAabb.intersectsRay(pickRay, ip)) {
+                            const distance = ip.clone().sub(nearPoint).length();
+                            if (distance < pickedDistance) {
+                                pickedDistance = distance;
+                                pickedModel = model;
+                                pickedPoint = ip.clone();
+                                if (Camera.debugPick) {
+                                    console.log('✅ meshInstance 命中', { model: model.filename, distance });
+                                    try {
+                                        const app: any = (scene as any).app;
+                                        app?.drawLine?.(nearPoint, ip, new (window as any).pc.Color(1, 0, 0, 1));
+                                    } catch { /* ignore */ }
+                                }
+                            } else if (Camera.debugPick) {
+                                console.log('↩️ meshInstance 命中但更远', { model: model.filename, distance });
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (pickedModel) {
+                if (Camera.debugPick) console.log('🎯 通过 meshInstance 精细拾取命中', pickedModel.filename);
+                scene.events.fire('camera.focalPointPicked', { camera: this, model: pickedModel, position: pickedPoint });
+                return;
+            }
+
+            // --- 阶段 2: 模型聚合 worldBound AABB 拾取 ---
+            for (let i = 0; i < gltfModels.length; i++) {
+                const model = gltfModels[i] as GltfModel;
+                if (!model.visible || !model.entity?.enabled) continue;
+                const wb = model.worldBound; // 已缓存
+                if (!wb) continue;
+                modelBounds.push({ model, bound: wb });
+                const ip = new Vec3();
+                if (wb.intersectsRay(pickRay, ip)) {
+                    const distance = ip.clone().sub(nearPoint).length();
+                    if (Camera.debugPick) {
+                        console.log('✅ GLB AABB Hit', {
+                            model: model.filename,
+                            distance,
+                            ip: ip.toString(),
+                            boundCenter: wb.center.toString(),
+                            boundHalfExtents: wb.halfExtents.toString()
+                        });
+                        // 画出模型聚合 AABB
+                        try {
+                            const app: any = (scene as any).app;
+                            const bbMin = wb.getMin();
+                            const bbMax = wb.getMax();
+                            const corners = [
+                                new Vec3(bbMin.x, bbMin.y, bbMin.z),
+                                new Vec3(bbMax.x, bbMin.y, bbMin.z),
+                                new Vec3(bbMax.x, bbMax.y, bbMin.z),
+                                new Vec3(bbMin.x, bbMax.y, bbMin.z),
+                                new Vec3(bbMin.x, bbMin.y, bbMax.z),
+                                new Vec3(bbMax.x, bbMin.y, bbMax.z),
+                                new Vec3(bbMax.x, bbMax.y, bbMax.z),
+                                new Vec3(bbMin.x, bbMax.y, bbMax.z)
+                            ];
+                            const color = new (window as any).pc.Color(0.9, 0.5, 0.1, 1);
+                            const drawE = (a: number, b: number) => app?.drawLine?.(corners[a], corners[b], color);
+                            drawE(0, 1); drawE(1, 2); drawE(2, 3); drawE(3, 0);
+                            drawE(4, 5); drawE(5, 6); drawE(6, 7); drawE(7, 4);
+                            drawE(0, 4); drawE(1, 5); drawE(2, 6); drawE(3, 7);
+                        } catch { /* ignore */ }
+                    }
+                    if (distance < pickedDistance) {
+                        pickedDistance = distance;
+                        pickedModel = model;
+                        pickedPoint = ip.clone();
+                    }
+                }
+            }
+
+            if (pickedModel) {
+                // 仅触发选中，不改变相机焦点（保持行为轻量）
+                scene.events.fire('camera.focalPointPicked', {
+                    camera: this,
+                    model: pickedModel,
+                    position: pickedPoint
+                });
+                return; // 已成功选中 GLB，后续不再做 splat 拾取
+            }
+
+            // =============================
+            // Fallback: 如果射线未命中任何 AABB，尝试基于包围盒中心投影的屏幕距离近似选取
+            // 用于模型较大 / 视线角度特殊 / AABB 射线漏判的情况
+            // =============================
+            const fallbackCandidates: { model: GltfModel, dist2: number }[] = [];
+            for (let i = 0; i < modelBounds.length; i++) {
+                const { model, bound } = modelBounds[i];
+                // 计算包围盒中心的屏幕坐标
+                const sp = cam.worldToScreen(bound.center, va.clone());
+                if (!sp) continue; // 极端情况
+                // 只考虑在前方的
+                if (sp.z < 0 || sp.z > 1) continue;
+                const dx = screenX - sp.x;
+                const dy = screenY - sp.y;
+                const d2 = dx * dx + dy * dy;
+                fallbackCandidates.push({ model, dist2: d2 });
+                // 调试输出
+                if (Camera.debugPick) {
+                    console.log('🔁 Fallback candidate', {
+                        model: model.filename,
+                        screenCenter: { x: sp.x, y: sp.y, z: sp.z },
+                        click: { x: screenX, y: screenY },
+                        dist2: d2
+                    });
+                }
+            }
+
+            if (fallbackCandidates.length) {
+                fallbackCandidates.sort((a, b) => a.dist2 - b.dist2);
+                const best = fallbackCandidates[0];
+                // 阈值 (像素^2)。25px 半径 => 625。可调整。
+                if (best.dist2 < 625) {
+                    if (Camera.debugPick) {
+                        console.log('✅ Fallback 选中模型 (projection distance)', {
+                            model: best.model.filename,
+                            dist2: best.dist2
+                        });
+                    }
+                    scene.events.fire('camera.focalPointPicked', {
+                        camera: this,
+                        model: best.model,
+                        position: best.model.worldBound?.center.clone() || nearPoint
+                    });
+                    return;
+                }
+                if (Camera.debugPick) {
+                    console.log('ℹ️ Fallback 放弃：最近模型中心距离过大', { dist2: best.dist2 });
+                }
+            }
+        }
+
+        // If no GLB model was picked, continue with splat picking
         const splats = scene.getElementsByType(ElementType.splat);
 
         let closestD = 0;
@@ -662,6 +982,16 @@ class Camera extends Element {
     endOffscreenMode() {
         this.targetSize = null;
         this.suppressFinalBlit = false;
+    }
+
+    // Pick GLB models without focusing camera (for selection only)
+    pickModel(screenX: number, screenY: number) {
+        // Deprecated: 现在统一使用 pickFocalPoint 完成 GLB + splat 拾取
+        if (!(window as any)._warnPickModelOnce) {
+            (window as any)._warnPickModelOnce = true;
+            console.warn('[pickModel] 已废弃：请直接使用 pickFocalPoint');
+        }
+        this.pickFocalPoint(screenX, screenY);
     }
 }
 

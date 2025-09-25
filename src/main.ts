@@ -189,21 +189,34 @@ const main = async () => {
     });
 
     events.on('bgClr', (clr: Color) => {
+        if (!clr) {
+            console.warn('bgClr event received undefined color');
+            return;
+        }
         const cnv = (v: number) => `${Math.max(0, Math.min(255, (v * 255))).toFixed(0)}`;
         document.body.style.backgroundColor = `rgba(${cnv(clr.r)},${cnv(clr.g)},${cnv(clr.b)},1)`;
     });
-    events.on('selectedClr', (clr: Color) => {
+    events.on('selectedClr', (_clr: Color) => {
         scene.forceRender = true;
     });
-    events.on('unselectedClr', (clr: Color) => {
+    events.on('unselectedClr', (_clr: Color) => {
         scene.forceRender = true;
     });
-    events.on('lockedClr', (clr: Color) => {
+    events.on('lockedClr', (_clr: Color) => {
         scene.forceRender = true;
     });
 
     // initialize colors from application config
-    const toColor = (value: { r: number, g: number, b: number, a: number }) => {
+    const toColor = (value: { r: number, g: number, b: number, a: number } | undefined) => {
+        if (!value) {
+            console.warn('toColor received undefined value, using default color');
+            return new Color(1, 1, 1, 1); // Default white color
+        }
+        if (typeof value.r !== 'number' || typeof value.g !== 'number' ||
+            typeof value.b !== 'number' || typeof value.a !== 'number') {
+            console.warn('toColor received invalid color values:', value);
+            return new Color(1, 1, 1, 1); // Default white color
+        }
         return new Color(value.r, value.g, value.b, value.a);
     };
     setBgClr(toColor(sceneConfig.bgClr));
@@ -248,7 +261,34 @@ const main = async () => {
     registerDocEvents(scene, events);
     registerRenderEvents(scene, events);
     initShortcuts(events);
-    initFileHandler(scene, events, editorUI.appContainer.dom);
+
+    // ---- Debug toggle helpers ----
+    const gltfModule = await import('./gltf-model');
+    const cameraModule = await import('./camera');
+    (window as any).GltfModel = gltfModule.GltfModel;
+    (window as any).Camera = cameraModule.Camera;
+
+    events.function('debug.modelAabb.enable', () => {
+        gltfModule.GltfModel.debugAabb = true;
+    });
+    events.function('debug.modelAabb.disable', () => {
+        gltfModule.GltfModel.debugAabb = false;
+    });
+    events.function('debug.pick.enable', () => {
+        cameraModule.Camera.debugPick = true;
+    });
+    events.function('debug.pick.disable', () => {
+        cameraModule.Camera.debugPick = false;
+    });
+    
+    console.log('🚀 DEBUG: About to initialize file handler');
+    
+    // Ensure all modules are loaded before initializing file handler
+    setTimeout(() => {
+        console.log('🚀 DEBUG: Delayed file handler initialization');
+        initFileHandler(scene, events, editorUI.appContainer.dom);
+        console.log('✅ DEBUG: File handler initialized with delay');
+    }, 100);
 
     // load async models
     scene.start();
