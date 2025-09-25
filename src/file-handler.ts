@@ -312,7 +312,9 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
     });
 
     events.function('scene.empty', () => {
-        return getSplats().length === 0;
+        const splats = getSplats();
+        const models = scene.getElementsByType(ElementType.model);
+        return splats.length === 0 && models.length === 0;
     });
 
     events.function('scene.import', async () => {

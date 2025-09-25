@@ -222,10 +222,18 @@ class Scene {
     }
 
     clear() {
+        // Clear all splats
         const splats = this.getElementsByType(ElementType.splat);
         splats.forEach((splat) => {
             this.remove(splat);
             (splat as Splat).destroy();
+        });
+
+        // Clear all GLB models
+        const models = this.getElementsByType(ElementType.model);
+        models.forEach((model) => {
+            this.remove(model);
+            model.destroy();
         });
     }
 
