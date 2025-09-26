@@ -1,22 +1,24 @@
 import { Events } from './events';
 
+// 快捷键选项接口
 interface ShortcutOptions {
-    ctrl?: boolean;
-    shift?: boolean;
-    sticky?: boolean;
-    capture?: boolean;      // use capture phase - i.e. handle the events before anyone else
-    func?: () => void;
-    event?: string;
+    ctrl?: boolean;         // 是否需要Ctrl键
+    shift?: boolean;        // 是否需要Shift键
+    sticky?: boolean;       // 是否是粘性快捷键（切换模式）
+    capture?: boolean;      // 使用捕获阶段 - 即在其他人之前处理事件
+    func?: () => void;      // 回调函数
+    event?: string;         // 事件名称
 }
 
+// 快捷键管理类
 class Shortcuts {
-    shortcuts: { keys: string[], options: ShortcutOptions, toggled: boolean }[] = [];
+    shortcuts: { keys: string[], options: ShortcutOptions, toggled: boolean }[] = [];  // 快捷键列表
 
     constructor(events: Events) {
         const shortcuts = this.shortcuts;
 
         const handleEvent = (e: KeyboardEvent, down: boolean, capture: boolean) => {
-            // skip keys in input fields
+            // 跳过输入字段中的按键
             if (!capture && e.target !== document.body) return;
 
             for (let i = 0; i < shortcuts.length; i++) {
@@ -31,7 +33,7 @@ class Shortcuts {
                     e.stopPropagation();
                     e.preventDefault();
 
-                    // handle sticky shortcuts
+                    // 处理粘性快捷键
                     if (options.sticky) {
                         if (down) {
                             shortcut.toggled = e.repeat;
@@ -41,7 +43,7 @@ class Shortcuts {
                             return;
                         }
                     } else {
-                        // ignore up events on non-sticky shortcuts
+                        // 忽略非粘性快捷键的按键释放事件
                         if (!down) return;
                     }
 

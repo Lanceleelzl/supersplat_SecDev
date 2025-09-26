@@ -7,23 +7,26 @@ import { Histogram } from './histogram';
 import { State } from '../splat-state';
 import { localize } from './localization';
 
+// 球面谐波常数
 const SH_C0 = 0.28209479177387814;
 
-const scaleFunc = (v: number) => Math.exp(v);
-const colorFunc = (v: number) => 0.5 + v * SH_C0;
-const sigmoid = (v: number) => 1 / (1 + Math.exp(-v));
+// 数据转换函数
+const scaleFunc = (v: number) => Math.exp(v);        // 缩放函数
+const colorFunc = (v: number) => 0.5 + v * SH_C0;   // 颜色函数
+const sigmoid = (v: number) => 1 / (1 + Math.exp(-v)); // S型函数
 
+// 数据字段对应的转换函数映射
 const dataFuncs = {
-    scale_0: scaleFunc,
-    scale_1: scaleFunc,
-    scale_2: scaleFunc,
-    f_dc_0: colorFunc,
-    f_dc_1: colorFunc,
-    f_dc_2: colorFunc,
-    opacity: sigmoid
+    scale_0: scaleFunc,  // X轴缩放
+    scale_1: scaleFunc,  // Y轴缩放
+    scale_2: scaleFunc,  // Z轴缩放
+    f_dc_0: colorFunc,   // 红色通道
+    f_dc_1: colorFunc,   // 绿色通道
+    f_dc_2: colorFunc,   // 蓝色通道
+    opacity: sigmoid     // 不透明度
 };
 
-// build a separator label
+// 构建分隔符标签
 const sepLabel = (labelText: string) => {
     const container = new Container({
         class: 'control-parent',
@@ -42,7 +45,7 @@ const sepLabel = (labelText: string) => {
     return container;
 };
 
-// build a data label
+// 构建数据标签
 const dataLabel = (parent: Container, labelText: string) => {
     const container = new Container({
         class: 'control-parent'

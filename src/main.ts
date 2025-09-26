@@ -41,7 +41,7 @@ declare global {
 }
 
 const getURLArgs = () => {
-    // extract settings from command line in non-prod builds only
+    // 从URL参数中提取配置设置
     const config = {};
 
     const apply = (key: string, value: string) => {
@@ -67,51 +67,52 @@ const getURLArgs = () => {
 };
 
 const initShortcuts = (events: Events) => {
+    // 初始化快捷键配置
     const shortcuts = new Shortcuts(events);
 
-    shortcuts.register(['Delete', 'Backspace'], { event: 'select.delete' });
-    shortcuts.register(['Escape'], { event: 'tool.deactivate' });
-    shortcuts.register(['Tab'], { event: 'selection.next' });
-    shortcuts.register(['1'], { event: 'tool.move', sticky: true });
-    shortcuts.register(['2'], { event: 'tool.rotate', sticky: true });
-    shortcuts.register(['3'], { event: 'tool.scale', sticky: true });
-    shortcuts.register(['G', 'g'], { event: 'grid.toggleVisible' });
-    shortcuts.register(['C', 'c'], { event: 'tool.toggleCoordSpace' });
-    shortcuts.register(['F', 'f'], { event: 'camera.focus' });
-    shortcuts.register(['R', 'r'], { event: 'tool.rectSelection', sticky: true });
-    shortcuts.register(['P', 'p'], { event: 'tool.polygonSelection', sticky: true });
-    shortcuts.register(['L', 'l'], { event: 'tool.lassoSelection', sticky: true });
-    shortcuts.register(['B', 'b'], { event: 'tool.brushSelection', sticky: true });
-    shortcuts.register(['A', 'a'], { event: 'select.all', ctrl: true });
-    shortcuts.register(['A', 'a'], { event: 'select.none', shift: true });
-    shortcuts.register(['I', 'i'], { event: 'select.invert', ctrl: true });
-    shortcuts.register(['H', 'h'], { event: 'select.hide' });
-    shortcuts.register(['U', 'u'], { event: 'select.unhide' });
-    shortcuts.register(['['], { event: 'tool.brushSelection.smaller' });
-    shortcuts.register([']'], { event: 'tool.brushSelection.bigger' });
-    shortcuts.register(['Z', 'z'], { event: 'edit.undo', ctrl: true, capture: true });
-    shortcuts.register(['Z', 'z'], { event: 'edit.redo', ctrl: true, shift: true, capture: true });
-    shortcuts.register(['M', 'm'], { event: 'camera.toggleMode' });
-    shortcuts.register(['D', 'd'], { event: 'dataPanel.toggle' });
-    shortcuts.register([' '], { event: 'camera.toggleOverlay' });
+    shortcuts.register(['Delete', 'Backspace'], { event: 'select.delete' });  // 删除选中项
+    shortcuts.register(['Escape'], { event: 'tool.deactivate' });  // 退出当前工具
+    shortcuts.register(['Tab'], { event: 'selection.next' });  // 切换到下一个选择
+    shortcuts.register(['1'], { event: 'tool.move', sticky: true });  // 移动工具
+    shortcuts.register(['2'], { event: 'tool.rotate', sticky: true });  // 旋转工具
+    shortcuts.register(['3'], { event: 'tool.scale', sticky: true });  // 缩放工具
+    shortcuts.register(['G', 'g'], { event: 'grid.toggleVisible' });  // 切换网格显示
+    shortcuts.register(['C', 'c'], { event: 'tool.toggleCoordSpace' });  // 切换坐标空间
+    shortcuts.register(['F', 'f'], { event: 'camera.focus' });  // 相机聚焦
+    shortcuts.register(['R', 'r'], { event: 'tool.rectSelection', sticky: true });  // 矩形选择
+    shortcuts.register(['P', 'p'], { event: 'tool.polygonSelection', sticky: true });  // 多边形选择
+    shortcuts.register(['L', 'l'], { event: 'tool.lassoSelection', sticky: true });  // 套索选择
+    shortcuts.register(['B', 'b'], { event: 'tool.brushSelection', sticky: true });  // 笔刷选择
+    shortcuts.register(['A', 'a'], { event: 'select.all', ctrl: true });  // 全选
+    shortcuts.register(['A', 'a'], { event: 'select.none', shift: true });  // 取消选择
+    shortcuts.register(['I', 'i'], { event: 'select.invert', ctrl: true });  // 反选
+    shortcuts.register(['H', 'h'], { event: 'select.hide' });  // 隐藏选中项
+    shortcuts.register(['U', 'u'], { event: 'select.unhide' });  // 显示隐藏项
+    shortcuts.register(['['], { event: 'tool.brushSelection.smaller' });  // 缩小笔刷
+    shortcuts.register([']'], { event: 'tool.brushSelection.bigger' });  // 放大笔刷
+    shortcuts.register(['Z', 'z'], { event: 'edit.undo', ctrl: true, capture: true });  // 撤销
+    shortcuts.register(['Z', 'z'], { event: 'edit.redo', ctrl: true, shift: true, capture: true });  // 重做
+    shortcuts.register(['M', 'm'], { event: 'camera.toggleMode' });  // 切换相机模式
+    shortcuts.register(['D', 'd'], { event: 'dataPanel.toggle' });  // 切换数据面板
+    shortcuts.register([' '], { event: 'camera.toggleOverlay' });  // 切换覆盖层
 
     return shortcuts;
 };
 
 const main = async () => {
-    // root events object
+    // 根事件对象
     const events = new Events();
 
-    // url
+    // 当前页面URL
     const url = new URL(window.location.href);
 
-    // edit history
+    // 编辑历史管理器
     const editHistory = new EditHistory(events);
 
-    // editor ui
+    // 编辑器用户界面
     const editorUI = new EditorUI(events);
 
-    // create the graphics device
+    // 创建图形设备
     const graphicsDevice = await createGraphicsDevice(editorUI.canvas, {
         deviceTypes: ['webgl2'],
         antialias: false,
@@ -125,10 +126,10 @@ const main = async () => {
         getURLArgs()
     ];
 
-    // resolve scene config
+    // 解析场景配置
     const sceneConfig = getSceneConfig(overrides);
 
-    // construct the manager
+    // 构建场景管理器
     const scene = new Scene(
         events,
         sceneConfig,
@@ -136,7 +137,7 @@ const main = async () => {
         graphicsDevice
     );
 
-    // colors
+    // 颜色管理
     const bgClr = new Color();
     const selectedClr = new Color();
     const unselectedClr = new Color();
@@ -206,16 +207,16 @@ const main = async () => {
         scene.forceRender = true;
     });
 
-    // initialize colors from application config
+    // 从应用配置初始化颜色
     const toColor = (value: { r: number, g: number, b: number, a: number } | undefined) => {
         if (!value) {
-            console.warn('toColor received undefined value, using default color');
-            return new Color(1, 1, 1, 1); // Default white color
+            console.warn('toColor 接收到未定义的值，使用默认颜色');
+            return new Color(1, 1, 1, 1); // 默认白色
         }
         if (typeof value.r !== 'number' || typeof value.g !== 'number' ||
             typeof value.b !== 'number' || typeof value.a !== 'number') {
-            console.warn('toColor received invalid color values:', value);
-            return new Color(1, 1, 1, 1); // Default white color
+            console.warn('toColor 接收到无效的颜色值:', value);
+            return new Color(1, 1, 1, 1); // 默认白色
         }
         return new Color(value.r, value.g, value.b, value.a);
     };
@@ -224,10 +225,10 @@ const main = async () => {
     setUnselectedClr(toColor(sceneConfig.unselectedClr));
     setLockedClr(toColor(sceneConfig.lockedClr));
     
-    // Initialize outline selection
+    // 初始化轮廓选择
     events.fire('view.setOutlineSelection', sceneConfig.show.outlineSelection);
 
-    // create the mask selection canvas
+    // 创建遮罩选择画布
     const maskCanvas = document.createElement('canvas');
     const maskContext = maskCanvas.getContext('2d');
     maskCanvas.setAttribute('id', 'mask-canvas');
@@ -238,7 +239,7 @@ const main = async () => {
         context: maskContext
     };
 
-    // tool manager
+    // 工具管理器
     const toolManager = new ToolManager(events);
     toolManager.register('rectSelection', new RectSelection(events, editorUI.toolsContainer.dom));
     toolManager.register('brushSelection', new BrushSelection(events, editorUI.toolsContainer.dom, mask));
@@ -265,13 +266,13 @@ const main = async () => {
     registerRenderEvents(scene, events);
     initShortcuts(events);
 
-    // Initialize file handler
+    // 初始化文件处理器
     initFileHandler(scene, events, editorUI.appContainer.dom);
 
-    // load async models
+    // 加载异步模型
     scene.start();
 
-    // handle load params
+    // 处理加载参数
     const loadList = url.searchParams.getAll('load');
     for (const value of loadList) {
         const decoded = decodeURIComponent(value);
@@ -281,7 +282,7 @@ const main = async () => {
         }]);
     }
 
-    // handle OS-based file association in PWA mode
+    // 在PWA模式下处理基于系统的文件关联
     if ('launchQueue' in window) {
         window.launchQueue.setConsumer(async (launchParams: LaunchParams) => {
             for (const file of launchParams.files) {

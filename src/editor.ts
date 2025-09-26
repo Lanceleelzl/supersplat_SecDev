@@ -8,14 +8,14 @@ import { BufferWriter } from './serialize/writer';
 import { Splat } from './splat';
 import { serializePly } from './splat-serialize';
 
-// register for editor and scene events
+// 注册编辑器和场景事件
 const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: Scene) => {
     const vec = new Vec3();
     const vec2 = new Vec3();
     const vec4 = new Vec4();
     const mat = new Mat4();
 
-    // get the list of selected splats (currently limited to just a single one)
+    // 获取已选择的点云列表（目前限制为只能选择一个）
     const selectedSplats = () => {
         const selected = events.invoke('selection') as Splat;
         return selected?.visible ? [selected] : [];
@@ -23,14 +23,14 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     let lastExportCursor = 0;
 
-    // add unsaved changes warning message.
+    // 添加未保存更改的警告消息
     window.addEventListener('beforeunload', (e) => {
         if (!events.invoke('scene.dirty')) {
-            // if the undo cursor matches last export, then we have no unsaved changes
+            // 如果撤销光标匹配最后的导出状态，则没有未保存的更改
             return undefined;
         }
 
-        const msg = 'You have unsaved changes. Are you sure you want to leave?';
+        const msg = '您有未保存的更改。确定要离开吗？';
         e.returnValue = msg;
         return msg;
     });
@@ -77,7 +77,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         scene.forceRender = true;
     });
 
-    // grid.visible
+    // 网格可见性控制
 
     const setGridVisible = (visible: boolean) => {
         if (visible !== scene.grid.visible) {
@@ -100,7 +100,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     setGridVisible(scene.config.show.grid);
 
-    // camera.fov
+    // 相机视野角度控制
 
     const setCameraFov = (fov: number) => {
         if (fov !== scene.camera.fov) {
@@ -117,7 +117,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         setCameraFov(fov);
     });
 
-    // camera.tonemapping
+    // 相机色调映射控制
 
     events.function('camera.tonemapping', () => {
         return scene.camera.tonemapping;
@@ -127,7 +127,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         scene.camera.tonemapping = value;
     });
 
-    // camera.bound
+    // 相机边界框显示控制
 
     let bound = scene.config.show.bound;
 
@@ -150,7 +150,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         setBoundVisible(!events.invoke('camera.bound'));
     });
 
-    // camera.focus
+    // 相机聚焦功能
 
     events.on('camera.focus', () => {
         const splat = selectedSplats()[0];
@@ -181,7 +181,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         scene.camera.setPose(new Vec3(x * zoom, y * zoom, z * zoom), new Vec3(0, 0, 0));
     });
 
-    // handle camera align events
+    // 处理相机对齐事件
     events.on('camera.align', (axis: string) => {
         switch (axis) {
             case 'px': scene.camera.setAzimElev(90, 0); break;
@@ -192,11 +192,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             case 'nz': scene.camera.setAzimElev(180, 0); break;
         }
 
-        // switch to ortho mode
+        // 切换到正交模式
         scene.camera.ortho = true;
     });
 
-    // returns true if the selected splat has selected gaussians
+    // 返回选中的点云是否包含已选中的高斯点
     events.function('selection.splats', () => {
         const splat = events.invoke('selection') as Splat;
         return splat?.numSelected > 0;

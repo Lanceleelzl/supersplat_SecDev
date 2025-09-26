@@ -25,29 +25,30 @@ import { ViewCube } from './view-cube';
 import { ViewPanel } from './view-panel';
 import { version } from '../../package.json';
 
+// 编辑器UI主类，负责管理整个用户界面
 class EditorUI {
-    appContainer: Container;
-    topContainer: Container;
-    canvasContainer: Container;
-    toolsContainer: Container;
-    canvas: HTMLCanvasElement;
-    popup: Popup;
+    appContainer: Container;     // 应用容器
+    topContainer: Container;     // 顶部容器
+    canvasContainer: Container;  // 画布容器
+    toolsContainer: Container;   // 工具容器
+    canvas: HTMLCanvasElement;   // HTML画布元素
+    popup: Popup;                // 弹窗组件
 
     constructor(events: Events) {
         localizeInit();
 
-        // favicon
+        // 设置网站图标
         const link = document.createElement('link');
         link.rel = 'icon';
         link.href = logo;
         document.head.appendChild(link);
 
-        // app
+        // 创建应用主容器
         const appContainer = new Container({
             id: 'app-container'
         });
 
-        // editor
+        // 编辑器界面设置
         const editorContainer = new Container({
             id: 'editor-container'
         });

@@ -9,41 +9,43 @@ import { Splat } from './splat';
 import { serializePly, serializePlyCompressed, SerializeSettings, serializeSplat, serializeViewer, ViewerExportSettings } from './splat-serialize';
 import { localize } from './ui/localization';
 
-// ts compiler and vscode find this type, but eslint does not
+// TypeScript编译器和VSCode能找到这个类型，但ESLint找不到
 type FilePickerAcceptType = unknown;
 
 type ExportType = 'ply' | 'splat' | 'viewer';
 
 type FileType = 'ply' | 'compressedPly' | 'splat' | 'htmlViewer' | 'packageViewer';
 
+// 场景导出选项接口
 interface SceneExportOptions {
-    filename: string;
-    splatIdx: 'all' | number;
-    serializeSettings: SerializeSettings;
+    filename: string;                        // 文件名
+    splatIdx: 'all' | number;               // 点云索引（全部或指定索引）
+    serializeSettings: SerializeSettings;    // 序列化设置
 
-    // ply
-    compressedPly?: boolean;
+    // PLY格式相关
+    compressedPly?: boolean;                // 是否压缩PLY
 
-    // viewer
-    viewerExportSettings?: ViewerExportSettings;
+    // 查看器相关
+    viewerExportSettings?: ViewerExportSettings;  // 查看器导出设置
 }
 
+// 文件选择器支持的文件类型定义
 const filePickerTypes: { [key: string]: FilePickerAcceptType } = {
     'ply': {
-        description: 'Gaussian Splat PLY File',
+        description: '高斯点云PLY文件',
         accept: {
             'application/ply': ['.ply']
         }
     },
     'sog': {
-        description: 'SOG Scene',
+        description: 'SOG场景文件',
         accept: {
             'application/x-gaussian-splat': ['.json', '.sog'],
             'image/webp': ['.webp']
         }
     },
     'splat': {
-        description: 'Splat File',
+        description: 'Splat文件',
         accept: {
             'application/x-gaussian-splat': ['.splat']
         }

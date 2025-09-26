@@ -31,7 +31,7 @@ import { Serializer } from './serializer';
 import { Splat } from './splat';
 import { TweenValue } from './tween-value';
 
-// calculate the forward vector given azimuth and elevation
+// 根据方位角和仰角计算前进向量
 const calcForwardVec = (result: Vec3, azim: number, elev: number) => {
     const ex = elev * math.DEG_TO_RAD;
     const ey = azim * math.DEG_TO_RAD;
@@ -42,7 +42,7 @@ const calcForwardVec = (result: Vec3, azim: number, elev: number) => {
     result.set(-c1 * s2, s1, c1 * c2);
 };
 
-// work globals
+// 工作用全局变量
 const forwardVec = new Vec3();
 const cameraPosition = new Vec3();
 const plane = new Plane();
@@ -51,49 +51,50 @@ const vec = new Vec3();
 const vecb = new Vec3();
 const va = new Vec3();
 
-// modulo dealing with negative numbers
+// 处理负数的模运算
 const mod = (n: number, m: number) => ((n % m) + m) % m;
 
+// 相机控制类，继承自Element基类
 class Camera extends Element {
     static debugPick = false; // 默认关闭拾取调试，需时设为 true
-    controller: PointerController;
-    entity: Entity;
-    focalPointTween = new TweenValue({ x: 0, y: 0.5, z: 0 });
-    azimElevTween = new TweenValue({ azim: 30, elev: -15 });
-    distanceTween = new TweenValue({ distance: 1 });
+    controller: PointerController;  // 指针控制器
+    entity: Entity;                 // 相机实体
+    focalPointTween = new TweenValue({ x: 0, y: 0.5, z: 0 });  // 焦点补间动画
+    azimElevTween = new TweenValue({ azim: 30, elev: -15 });   // 方位角和仰角补间动画
+    distanceTween = new TweenValue({ distance: 1 });           // 距离补间动画
 
-    minElev = -90;
-    maxElev = 90;
+    minElev = -90;  // 最小仰角
+    maxElev = 90;   // 最大仰角
 
-    sceneRadius = 1;
+    sceneRadius = 1;  // 场景半径
 
-    flySpeed = 5;
+    flySpeed = 5;     // 飞行速度
 
-    picker: Picker;
+    picker: Picker;   // 拾取器
 
-    workRenderTarget: RenderTarget;
+    workRenderTarget: RenderTarget;  // 工作渲染目标
 
-    // overridden target size
+    // 重写的目标尺寸
     targetSize: { width: number, height: number } = null;
 
-    suppressFinalBlit = false;
+    suppressFinalBlit = false;  // 抑制最终混合
 
-    renderOverlays = true;
+    renderOverlays = true;      // 渲染覆盖层
 
-    updateCameraUniforms: () => void;
+    updateCameraUniforms: () => void;  // 更新相机制服函数
 
     constructor() {
         super(ElementType.camera);
-        // create the camera entity
+        // 创建相机实体
         this.entity = new Entity('Camera');
         this.entity.addComponent('camera');
 
-        // NOTE: this call is needed for refraction effect to work correctly, but
-        // it slows rendering and should only be made when required.
+        // 注意：此调用对于折射效果正常工作是必需的，但会减慢渲染速度，
+        // 应仅在需要时进行。
         // this.entity.camera.requestSceneColorMap(true);
     }
 
-    // ortho
+    // 正交投影设置
     set ortho(value: boolean) {
         if (value !== this.ortho) {
             this.entity.camera.projection = value ? PROJECTION_ORTHOGRAPHIC : PROJECTION_PERSPECTIVE;

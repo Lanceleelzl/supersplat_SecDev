@@ -4,11 +4,12 @@ import { GltfModel } from './gltf-model';
 import { Scene } from './scene';
 import { Splat } from './splat';
 
+// 注册选择相关的事件处理函数
 const registerSelectionEvents = (events: Events, scene: Scene) => {
     let selection: Element = null;
 
     const setSelection = (element: Element, fromUserInteraction = false) => {
-        // Check if element is visible (for both Splats and GltfModels)
+        // 检查元素是否可见（对Splat和GltfModel都适用）
         let isVisible = true;
         if (element?.type === ElementType.splat) {
             isVisible = (element as Splat).visible;
@@ -21,13 +22,13 @@ const registerSelectionEvents = (events: Events, scene: Scene) => {
             selection = element;
             events.fire('selection.changed', selection, prev);
             
-            // Show info popup for GLB models ONLY when user clicks (not on auto-selection)
+            // 仅当用户点击时（非自动选择）为GLB模型显示信息弹窗
             if (element && element.type === ElementType.model && fromUserInteraction) {
                 const model = element as GltfModel;
                 events.invoke('showPopup', {
                     type: 'info',
-                    header: 'Model Selected',
-                    message: `Selected model: ${model.filename || 'Unknown'}\nType: GLB/glTF Model\nVisible: ${model.visible ? 'Yes' : 'No'}`
+                    header: '模型已选择',
+                    message: `选中的模型: ${model.filename || '未知'}\n类型: GLB/glTF 模型\n可见: ${model.visible ? '是' : '否'}`
                 });
             }
         }

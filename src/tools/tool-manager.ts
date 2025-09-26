@@ -1,14 +1,16 @@
 import { Events } from '../events';
 
+// 工具接口定义
 interface Tool {
-    activate: () => void;
-    deactivate: () => void;
+    activate: () => void;    // 激活工具
+    deactivate: () => void;  // 停用工具
 }
 
+// 工具管理器类，负责管理各种编辑工具
 class ToolManager {
-    tools = new Map<string, Tool>();
-    events: Events;
-    active: string | null = null;
+    tools = new Map<string, Tool>();  // 工具映射表
+    events: Events;                   // 事件系统
+    active: string | null = null;     // 当前激活的工具
 
     constructor(events: Events) {
         this.events = events;
@@ -21,7 +23,7 @@ class ToolManager {
             return this.active;
         });
 
-        let coordSpace: 'local' | 'world' = 'world';
+        let coordSpace: 'local' | 'world' = 'world';  // 坐标空间：本地或世界
 
         const setCoordSpace = (space: 'local' | 'world') => {
             if (space !== coordSpace) {
@@ -43,6 +45,7 @@ class ToolManager {
         });
     }
 
+    // 注册工具到管理器
     register(name: string, tool: Tool) {
         this.tools.set(name, tool);
 

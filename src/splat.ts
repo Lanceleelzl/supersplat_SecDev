@@ -27,10 +27,12 @@ import { State } from './splat-state';
 import { Transform } from './transform';
 import { TransformPalette } from './transform-palette';
 
+// 工作用向量
 const vec = new Vec3();
 const veca = new Vec3();
 const vecb = new Vec3();
 
+// 用于创建边界框可视化的点集合
 const boundingPoints =
     [-1, 1].map((x) => {
         return [-1, 1].map((y) => {
@@ -44,10 +46,11 @@ const boundingPoints =
         });
     }).flat(3);
 
+// 高斯点云类，继承自Element基类
 class Splat extends Element {
-    asset: Asset;
-    splatData: GSplatData;
-    numSplats = 0;
+    asset: Asset;           // 资产引用
+    splatData: GSplatData;  // 点云数据
+    numSplats = 0;          // 点云数量
     numDeleted = 0;
     numLocked = 0;
     numSelected = 0;

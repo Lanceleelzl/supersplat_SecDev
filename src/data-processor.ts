@@ -23,25 +23,31 @@ import { vertexShader as intersectionVS, fragmentShader as intersectionFS } from
 import { vertexShader as positionVS, fragmentShader as positionFS } from './shaders/position-shader';
 import { Splat } from './splat';
 
+// 遮罩选择选项
 type MaskOptions = {
     mask: Texture;
 };
 
+// 矩形选择选项
 type RectOptions = {
     rect: { x1: number, y1: number, x2: number, y2: number };
 };
 
+// 球形选择选项
 type SphereOptions = {
     sphere: { x: number, y: number, z: number, radius: number };
 };
 
+// 立方体选择选项
 type BoxOptions = {
     box: { x: number, y: number, z: number, lenx: number, leny: number, lenz: number };
 };
 
+// 工作用向量
 const v1 = new Vec3();
 const v2 = new Vec3();
 
+// 解析作用域变量的辅助函数
 const resolve = (scope: ScopeSpace, values: any) => {
     for (const key in values) {
         scope.resolve(key).setValue(values[key]);

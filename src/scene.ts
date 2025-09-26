@@ -25,24 +25,25 @@ import { Splat } from './splat';
 import { SplatOverlay } from './splat-overlay';
 import { Underlay } from './underlay';
 
+// 场景管理类，负责管理3D场景中的所有元素
 class Scene {
     events: Events;
     config: SceneConfig;
     canvas: HTMLCanvasElement;
     app: PCApp;
-    backgroundLayer: Layer;
-    shadowLayer: Layer;
-    debugLayer: Layer;
-    overlayLayer: Layer;
-    gizmoLayer: Layer;
-    sceneState = [new SceneState(), new SceneState()];
-    elements: Element[] = [];
-    boundStorage = new BoundingBox();
-    boundDirty = true;
-    forceRender = false;
+    backgroundLayer: Layer;  // 背景层
+    shadowLayer: Layer;      // 阴影层
+    debugLayer: Layer;       // 调试层
+    overlayLayer: Layer;     // 覆盖层
+    gizmoLayer: Layer;       // 小工具层
+    sceneState = [new SceneState(), new SceneState()];  // 场景状态缓存
+    elements: Element[] = [];  // 场景元素列表
+    boundStorage = new BoundingBox();  // 边界框存储
+    boundDirty = true;       // 边界框是否需要更新
+    forceRender = false;     // 强制渲染标志
 
-    lockedRenderMode = false;
-    lockedRender = false;
+    lockedRenderMode = false;  // 锁定渲染模式
+    lockedRender = false;      // 锁定渲染
 
     canvasResize: {width: number; height: number} | null = null;
     targetSize = {
@@ -71,40 +72,39 @@ class Scene {
         this.config = config;
         this.canvas = canvas;
 
-        // configure the playcanvas application. we render to an offscreen buffer so require
-        // only the simplest of backbuffers.
+        // 配置PlayCanvas应用程序。我们渲染到离屏缓冲区，因此只需要最简单的后缓冲区
         this.app = new PCApp(canvas, { graphicsDevice });
 
-        // only render the scene when instructed
+        // 仅在指令下渲染场景
         this.app.autoRender = false;
         // @ts-ignore
         this.app._allowResize = false;
         this.app.scene.clusteredLightingEnabled = false;
 
-        // hack: disable lightmapper first bake until we expose option for this
+        // 临时方案：禁用光照映射器的首次烘焙，直到我们提供相关选项
         // @ts-ignore
         this.app.off('prerender', this.app._firstBake, this.app);
 
         // @ts-ignore
         this.app.loader.getHandler('texture').imgParser.crossOrigin = 'anonymous';
 
-        // this is required to get full res AR mode backbuffer
+        // 这是获取全分辨率AR模式后缓冲区所必需的
         this.app.graphicsDevice.maxPixelRatio = window.devicePixelRatio;
 
-        // configure application canvas
+        // 配置应用程序画布
         const observer = new ResizeObserver((entries: ResizeObserverEntry[]) => {
             if (entries.length > 0) {
                 const entry = entries[0];
                 if (entry) {
                     if (entry.devicePixelContentBoxSize) {
-                        // on non-safari browsers, we are given the pixel-perfect canvas size
+                        // 在非Safari浏览器上，我们获得像素完美的画布尺寸
                         this.canvasResize = {
                             width: entry.devicePixelContentBoxSize[0].inlineSize,
                             height: entry.devicePixelContentBoxSize[0].blockSize
                         };
                     } else if (entry.contentBoxSize.length > 0) {
-                        // on safari browsers we must calculate pixel size from CSS size ourselves
-                        // and hope the browser performs the same calculation.
+                        // 在Safari浏览器上，我们必须自己从CSS尺寸计算像素尺寸
+                        // 并希望浏览器执行相同的计算
                         const pixelRatio = window.devicePixelRatio;
                         this.canvasResize = {
                             width: Math.ceil(entry.contentBoxSize[0].inlineSize * pixelRatio),
