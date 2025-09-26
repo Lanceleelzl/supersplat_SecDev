@@ -2,6 +2,7 @@ import { Mat4, Vec3 } from 'playcanvas';
 
 import { PlacePivotOp, SplatsTransformOp, MultiOp } from './edit-ops';
 import { Events } from './events';
+import { GltfModel } from './gltf-model';
 import { Pivot } from './pivot';
 import { Splat } from './splat';
 import { State } from './splat-state';
@@ -55,8 +56,9 @@ class SplatsTransformHandler implements TransformHandler {
             }
         });
 
-        events.on('camera.focalPointPicked', (details: { splat: Splat, position: Vec3 }) => {
-            if (this.splat && ['move', 'rotate', 'scale'].includes(this.events.invoke('tool.active'))) {
+        events.on('camera.focalPointPicked', (details: { splat?: Splat, model?: GltfModel, position: Vec3 }) => {
+            // Only handle splat picking for splats transform handler
+            if (this.splat && details.splat && ['move', 'rotate', 'scale'].includes(this.events.invoke('tool.active'))) {
                 const pivot = events.invoke('pivot') as Pivot;
                 const oldt = pivot.transform.clone();
                 const newt = new Transform(details.position, pivot.transform.rotation, pivot.transform.scale);

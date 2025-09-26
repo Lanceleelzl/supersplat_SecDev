@@ -539,6 +539,14 @@ class Camera extends Element {
         const sx = screenX / target.clientWidth * scene.targetSize.width;
         const sy = screenY / target.clientHeight * scene.targetSize.height;
 
+        // Add debug information for GLB picking diagnosis
+        console.log('🎯 DEBUG: Pick attempt started', {
+            screenCoords: { x: screenX, y: screenY },
+            targetSize: scene.targetSize,
+            canvasClient: { width: target.clientWidth, height: target.clientHeight },
+            transformedCoords: { sx, sy }
+        });
+
         // =============================
         // Step 0: Physics-based raycast (if physics components are present)
         // 优先使用物理系统的精确射线检测（可与复杂 mesh collider 搭配）。
@@ -623,8 +631,18 @@ class Camera extends Element {
         // 2) 模型整体聚合 worldBound AABB 测试（粗略）
         // 3) 中心投影 fallback
         const gltfModels = scene.getElementsByType(ElementType.model);
+        console.log('🎯 DEBUG: GLB models in scene', {
+            modelCount: gltfModels.length,
+            models: gltfModels.map((m: any) => ({
+                filename: m.filename,
+                visible: m.visible,
+                entityEnabled: m.entity?.enabled,
+                hasWorldBound: !!m.worldBound,
+                boundCenter: m.worldBound?.center.toString(),
+                boundSize: m.worldBound?.halfExtents.toString()
+            }))
+        });
         if (!gltfModels.length) {
-            // 仅提示一次（可选：放入静态集合避免骚扰，这里简单输出）
             console.warn('[Picking] 没有可用的 GLB 模型元素 (ElementType.model)。请确认已调用 scene.add(gltfModel)');
         }
         let pickedModel: GltfModel = null;
@@ -633,20 +651,38 @@ class Camera extends Element {
 
         if (gltfModels.length > 0) {
             const cam = this.entity.camera;
+            const cameraPos = this.entity.getPosition();
+            const cameraForward = this.entity.forward;
+            
+            // Check if any models are in front of the camera
+            for (const model of gltfModels) {
+                const glbModel = model as GltfModel;
+                if (glbModel.worldBound) {
+                    const toModel = glbModel.worldBound.center.clone().sub(cameraPos);
+                    const projectionOnForward = toModel.dot(cameraForward);
+                    console.log('🔍 DEBUG: Model position relative to camera', {
+                        filename: glbModel.filename,
+                        modelCenter: glbModel.worldBound.center.toString(),
+                        cameraPos: cameraPos.toString(),
+                        cameraForward: cameraForward.toString(),
+                        toModel: toModel.toString(),
+                        projectionOnForward: projectionOnForward,
+                        isInFront: projectionOnForward > 0
+                    });
+                }
+            }
+            
             const nearPoint = new Vec3();
             const farPoint = new Vec3();
 
             // 统一使用渲染目标尺寸 (考虑 DPR) 的转换
             // PlayCanvas 的 camera.screenToWorld 期望的是相对 canvas 的屏幕坐标（像素）
             // 但我们有可能在高 DPI 下使用 clientWidth / clientHeight 逻辑，故确保一致性
-            const dpr = window.devicePixelRatio || 1;
-            const scaledX = screenX * dpr;
-            const scaledY = screenY * dpr;
+            // Use the same coordinate system as splat picking for consistency
+            cam.screenToWorld(screenX, screenY, cam.nearClip, nearPoint);
+            cam.screenToWorld(screenX, screenY, cam.farClip, farPoint);
 
-            cam.screenToWorld(scaledX, scaledY, cam.nearClip, nearPoint);
-            cam.screenToWorld(scaledX, scaledY, cam.farClip, farPoint);
-
-            const rayDir = farPoint.sub(nearPoint).normalize();
+            const rayDir = farPoint.clone().sub(nearPoint).normalize();
             const pickRay = new Ray(nearPoint, rayDir);
 
             // Debug 可视化：绘制射线
@@ -655,13 +691,23 @@ class Camera extends Element {
                     const app: any = (scene as any).app;
                     const lineEnd = nearPoint.clone().add(rayDir.clone().mulScalar(1000));
                     app?.drawLine?.(nearPoint, lineEnd, new (window as any).pc.Color(1, 1, 0, 1));
+                    console.log('🎯 DEBUG: Pick ray details', {
+                        nearPoint: nearPoint.toString(),
+                        farPoint: farPoint.toString(),
+                        rayDirection: rayDir.toString(),
+                        rayLength: rayDir.length(),
+                        cameraPosition: this.entity.getPosition().toString(),
+                        cameraForward: this.entity.forward.toString(),
+                        nearClip: cam.nearClip,
+                        farClip: cam.farClip
+                    });
                 } catch { /* ignore visualization errors */ }
             }
 
             // 记录调试信息
             if (Camera.debugPick) {
                 console.log('🎯 GLB Picking Ray', {
-                    screen: { x: screenX, y: screenY, scaledX, scaledY, dpr },
+                    screen: { x: screenX, y: screenY },
                     near: nearPoint.toString(),
                     dir: rayDir.toString(),
                     modelCount: gltfModels.length
@@ -738,18 +784,108 @@ class Camera extends Element {
                 const model = gltfModels[i] as GltfModel;
                 if (!model.visible || !model.entity?.enabled) continue;
                 const wb = model.worldBound; // 已缓存
+                console.log('🔍 DEBUG: Testing model world bound', {
+                    filename: model.filename,
+                    hasWorldBound: !!wb,
+                    worldBoundCenter: wb?.center.toString(),
+                    worldBoundHalfExtents: wb?.halfExtents.toString()
+                });
                 if (!wb) continue;
                 modelBounds.push({ model, bound: wb });
                 const ip = new Vec3();
-                if (wb.intersectsRay(pickRay, ip)) {
-                    const distance = ip.clone().sub(nearPoint).length();
+                const intersects = wb.intersectsRay(pickRay, ip);
+                
+                // Manual ray-AABB intersection test as fallback
+                let manualIntersects = false;
+                const manualIP = new Vec3();
+                
+                // Implement our own ray-AABB intersection
+                const rayOrigin = pickRay.origin;
+                const rayDirection = pickRay.direction;
+                const aabbMin = wb.getMin();
+                const aabbMax = wb.getMax();
+                
+                let tmin = (aabbMin.x - rayOrigin.x) / rayDirection.x;
+                let tmax = (aabbMax.x - rayOrigin.x) / rayDirection.x;
+                
+                if (tmin > tmax) {
+                    const temp = tmin;
+                    tmin = tmax;
+                    tmax = temp;
+                }
+                
+                let tymin = (aabbMin.y - rayOrigin.y) / rayDirection.y;
+                let tymax = (aabbMax.y - rayOrigin.y) / rayDirection.y;
+                
+                if (tymin > tymax) {
+                    const temp = tymin;
+                    tymin = tymax;
+                    tymax = temp;
+                }
+                
+                if (tmin > tymax || tymin > tmax) {
+                    manualIntersects = false;
+                } else {
+                    tmin = Math.max(tmin, tymin);
+                    tmax = Math.min(tmax, tymax);
+                    
+                    let tzmin = (aabbMin.z - rayOrigin.z) / rayDirection.z;
+                    let tzmax = (aabbMax.z - rayOrigin.z) / rayDirection.z;
+                    
+                    if (tzmin > tzmax) {
+                        const temp = tzmin;
+                        tzmin = tzmax;
+                        tzmax = temp;
+                    }
+                    
+                    if (tmin > tzmax || tzmin > tmax) {
+                        manualIntersects = false;
+                    } else {
+                        tmin = Math.max(tmin, tzmin);
+                        if (tmin >= 0) {
+                            manualIntersects = true;
+                            manualIP.copy(rayOrigin).add(rayDirection.clone().mulScalar(tmin));
+                        }
+                    }
+                }
+                
+                // Additional debugging: manually test if the ray should intersect
+                const rayToCenter = wb.center.clone().sub(pickRay.origin);
+                const projectionOnRay = rayToCenter.dot(pickRay.direction);
+                const distanceToRay = rayToCenter.clone().sub(pickRay.direction.clone().mulScalar(projectionOnRay)).length();
+                const maxHalfExtent = Math.max(wb.halfExtents.x, wb.halfExtents.y, wb.halfExtents.z);
+                
+                console.log('🔍 DEBUG: Ray-AABB intersection test', {
+                    filename: model.filename,
+                    playcavasIntersects: intersects,
+                    manualIntersects: manualIntersects,
+                    intersectionPoint: intersects ? ip.toString() : (manualIntersects ? manualIP.toString() : 'none'),
+                    aabbCenter: wb.center.toString(),
+                    aabbHalfExtents: wb.halfExtents.toString(),
+                    aabbMin: aabbMin.toString(),
+                    aabbMax: aabbMax.toString(),
+                    rayOrigin: pickRay.origin.toString(),
+                    rayDirection: pickRay.direction.toString(),
+                    distanceToCenter: pickRay.origin.distance(wb.center),
+                    projectionOnRay: projectionOnRay,
+                    distanceToRay: distanceToRay,
+                    maxHalfExtent: maxHalfExtent,
+                    shouldIntersect: distanceToRay < maxHalfExtent && projectionOnRay > 0
+                });
+                // Use either PlayCanvas result or manual calculation
+                const finalIntersects = intersects || manualIntersects;
+                const finalIP = intersects ? ip : manualIP;
+                
+                if (finalIntersects) {
+                    const distance = finalIP.clone().sub(nearPoint).length();
                     if (Camera.debugPick) {
                         console.log('✅ GLB AABB Hit', {
                             model: model.filename,
                             distance,
-                            ip: ip.toString(),
+                            ip: finalIP.toString(),
                             boundCenter: wb.center.toString(),
-                            boundHalfExtents: wb.halfExtents.toString()
+                            boundHalfExtents: wb.halfExtents.toString(),
+                            usedManualCalc: !intersects && manualIntersects
                         });
                         // 画出模型聚合 AABB
                         try {
@@ -776,7 +912,7 @@ class Camera extends Element {
                     if (distance < pickedDistance) {
                         pickedDistance = distance;
                         pickedModel = model;
-                        pickedPoint = ip.clone();
+                        pickedPoint = finalIP.clone();
                     }
                 }
             }
@@ -821,8 +957,19 @@ class Camera extends Element {
             if (fallbackCandidates.length) {
                 fallbackCandidates.sort((a, b) => a.dist2 - b.dist2);
                 const best = fallbackCandidates[0];
-                // 阈值 (像素^2)。25px 半径 => 625。可调整。
-                if (best.dist2 < 625) {
+                
+                // 临时测试：大幅增加阈值，确保GLB模型能被选中
+                const threshold = 10000; // 100px 半径
+                if (Camera.debugPick) {
+                    console.log('🔍 DEBUG: Fallback candidate check', {
+                        model: best.model.filename,
+                        dist2: best.dist2,
+                        threshold: threshold,
+                        willSelect: best.dist2 < threshold
+                    });
+                }
+                
+                if (best.dist2 < threshold) {
                     if (Camera.debugPick) {
                         console.log('✅ Fallback 选中模型 (projection distance)', {
                             model: best.model.filename,

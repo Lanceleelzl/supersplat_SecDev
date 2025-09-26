@@ -23,7 +23,8 @@ const sceneConfig = {
     show: {
         grid: true,
         bound: true,
-        shBands: 3
+        shBands: 3,
+        outlineSelection: true
     },
     controls: {
         dampingFactor: 0.2,

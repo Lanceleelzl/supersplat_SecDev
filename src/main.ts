@@ -223,6 +223,9 @@ const main = async () => {
     setSelectedClr(toColor(sceneConfig.selectedClr));
     setUnselectedClr(toColor(sceneConfig.unselectedClr));
     setLockedClr(toColor(sceneConfig.lockedClr));
+    
+    // Initialize outline selection
+    events.fire('view.setOutlineSelection', sceneConfig.show.outlineSelection);
 
     // create the mask selection canvas
     const maskCanvas = document.createElement('canvas');
@@ -262,33 +265,8 @@ const main = async () => {
     registerRenderEvents(scene, events);
     initShortcuts(events);
 
-    // ---- Debug toggle helpers ----
-    const gltfModule = await import('./gltf-model');
-    const cameraModule = await import('./camera');
-    (window as any).GltfModel = gltfModule.GltfModel;
-    (window as any).Camera = cameraModule.Camera;
-
-    events.function('debug.modelAabb.enable', () => {
-        gltfModule.GltfModel.debugAabb = true;
-    });
-    events.function('debug.modelAabb.disable', () => {
-        gltfModule.GltfModel.debugAabb = false;
-    });
-    events.function('debug.pick.enable', () => {
-        cameraModule.Camera.debugPick = true;
-    });
-    events.function('debug.pick.disable', () => {
-        cameraModule.Camera.debugPick = false;
-    });
-    
-    console.log('🚀 DEBUG: About to initialize file handler');
-    
-    // Ensure all modules are loaded before initializing file handler
-    setTimeout(() => {
-        console.log('🚀 DEBUG: Delayed file handler initialization');
-        initFileHandler(scene, events, editorUI.appContainer.dom);
-        console.log('✅ DEBUG: File handler initialized with delay');
-    }, 100);
+    // Initialize file handler
+    initFileHandler(scene, events, editorUI.appContainer.dom);
 
     // load async models
     scene.start();
