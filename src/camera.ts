@@ -539,14 +539,6 @@ class Camera extends Element {
         const sx = screenX / target.clientWidth * scene.targetSize.width;
         const sy = screenY / target.clientHeight * scene.targetSize.height;
 
-        // Add debug information for GLB picking diagnosis
-        console.log('🎯 DEBUG: Pick attempt started', {
-            screenCoords: { x: screenX, y: screenY },
-            targetSize: scene.targetSize,
-            canvasClient: { width: target.clientWidth, height: target.clientHeight },
-            transformedCoords: { sx, sy }
-        });
-
         // =============================
         // Step 0: Physics-based raycast (if physics components are present)
         // 优先使用物理系统的精确射线检测（可与复杂 mesh collider 搭配）。
@@ -584,9 +576,7 @@ class Camera extends Element {
                                     cur = cur.parent;
                                 }
                                 if (foundModel) {
-                                    if (Camera.debugPick) {
-                                        console.log('🎯 Physics Raycast 命中 (fallback app)', { model: foundModel.filename });
-                                    }
+
                                     scene.events.fire('camera.focalPointPicked', {
                                         camera: this,
                                         model: foundModel,
@@ -606,9 +596,7 @@ class Camera extends Element {
                                 cur = cur.parent;
                             }
                             if (foundModel) {
-                                if (Camera.debugPick) {
-                                    console.log('🎯 Physics Raycast 命中', { model: foundModel.filename });
-                                }
+
                                 scene.events.fire('camera.focalPointPicked', {
                                     camera: this,
                                     model: foundModel,
@@ -621,9 +609,7 @@ class Camera extends Element {
                 }
             }
         } catch (e) {
-            if (Camera.debugPick) {
-                console.warn('⚠️ Physics raycast 失败或未初始化', e);
-            }
+            // Physics raycast failed, continue with other picking methods
         }
         // First: GLB 模型拾取（多阶段）
         // 阶段顺序：
@@ -631,20 +617,6 @@ class Camera extends Element {
         // 2) 模型整体聚合 worldBound AABB 测试（粗略）
         // 3) 中心投影 fallback
         const gltfModels = scene.getElementsByType(ElementType.model);
-        console.log('🎯 DEBUG: GLB models in scene', {
-            modelCount: gltfModels.length,
-            models: gltfModels.map((m: any) => ({
-                filename: m.filename,
-                visible: m.visible,
-                entityEnabled: m.entity?.enabled,
-                hasWorldBound: !!m.worldBound,
-                boundCenter: m.worldBound?.center.toString(),
-                boundSize: m.worldBound?.halfExtents.toString()
-            }))
-        });
-        if (!gltfModels.length) {
-            console.warn('[Picking] 没有可用的 GLB 模型元素 (ElementType.model)。请确认已调用 scene.add(gltfModel)');
-        }
         let pickedModel: GltfModel = null;
         let pickedPoint: Vec3 = null;
         let pickedDistance = Number.POSITIVE_INFINITY;
@@ -653,25 +625,7 @@ class Camera extends Element {
             const cam = this.entity.camera;
             const cameraPos = this.entity.getPosition();
             const cameraForward = this.entity.forward;
-            
-            // Check if any models are in front of the camera
-            for (const model of gltfModels) {
-                const glbModel = model as GltfModel;
-                if (glbModel.worldBound) {
-                    const toModel = glbModel.worldBound.center.clone().sub(cameraPos);
-                    const projectionOnForward = toModel.dot(cameraForward);
-                    console.log('🔍 DEBUG: Model position relative to camera', {
-                        filename: glbModel.filename,
-                        modelCenter: glbModel.worldBound.center.toString(),
-                        cameraPos: cameraPos.toString(),
-                        cameraForward: cameraForward.toString(),
-                        toModel: toModel.toString(),
-                        projectionOnForward: projectionOnForward,
-                        isInFront: projectionOnForward > 0
-                    });
-                }
-            }
-            
+
             const nearPoint = new Vec3();
             const farPoint = new Vec3();
 
@@ -691,27 +645,8 @@ class Camera extends Element {
                     const app: any = (scene as any).app;
                     const lineEnd = nearPoint.clone().add(rayDir.clone().mulScalar(1000));
                     app?.drawLine?.(nearPoint, lineEnd, new (window as any).pc.Color(1, 1, 0, 1));
-                    console.log('🎯 DEBUG: Pick ray details', {
-                        nearPoint: nearPoint.toString(),
-                        farPoint: farPoint.toString(),
-                        rayDirection: rayDir.toString(),
-                        rayLength: rayDir.length(),
-                        cameraPosition: this.entity.getPosition().toString(),
-                        cameraForward: this.entity.forward.toString(),
-                        nearClip: cam.nearClip,
-                        farClip: cam.farClip
-                    });
-                } catch { /* ignore visualization errors */ }
-            }
 
-            // 记录调试信息
-            if (Camera.debugPick) {
-                console.log('🎯 GLB Picking Ray', {
-                    screen: { x: screenX, y: screenY },
-                    near: nearPoint.toString(),
-                    dir: rayDir.toString(),
-                    modelCount: gltfModels.length
-                });
+                } catch { /* ignore visualization errors */ }
             }
 
             const modelBounds: { model: GltfModel, bound: any }[] = [];
@@ -759,14 +694,12 @@ class Camera extends Element {
                                 pickedModel = model;
                                 pickedPoint = ip.clone();
                                 if (Camera.debugPick) {
-                                    console.log('✅ meshInstance 命中', { model: model.filename, distance });
+
                                     try {
                                         const app: any = (scene as any).app;
                                         app?.drawLine?.(nearPoint, ip, new (window as any).pc.Color(1, 0, 0, 1));
                                     } catch { /* ignore */ }
                                 }
-                            } else if (Camera.debugPick) {
-                                console.log('↩️ meshInstance 命中但更远', { model: model.filename, distance });
                             }
                         }
                     }
@@ -774,7 +707,7 @@ class Camera extends Element {
             }
 
             if (pickedModel) {
-                if (Camera.debugPick) console.log('🎯 通过 meshInstance 精细拾取命中', pickedModel.filename);
+
                 scene.events.fire('camera.focalPointPicked', { camera: this, model: pickedModel, position: pickedPoint });
                 return;
             }
@@ -784,12 +717,6 @@ class Camera extends Element {
                 const model = gltfModels[i] as GltfModel;
                 if (!model.visible || !model.entity?.enabled) continue;
                 const wb = model.worldBound; // 已缓存
-                console.log('🔍 DEBUG: Testing model world bound', {
-                    filename: model.filename,
-                    hasWorldBound: !!wb,
-                    worldBoundCenter: wb?.center.toString(),
-                    worldBoundHalfExtents: wb?.halfExtents.toString()
-                });
                 if (!wb) continue;
                 modelBounds.push({ model, bound: wb });
                 const ip = new Vec3();
@@ -855,23 +782,6 @@ class Camera extends Element {
                 const distanceToRay = rayToCenter.clone().sub(pickRay.direction.clone().mulScalar(projectionOnRay)).length();
                 const maxHalfExtent = Math.max(wb.halfExtents.x, wb.halfExtents.y, wb.halfExtents.z);
                 
-                console.log('🔍 DEBUG: Ray-AABB intersection test', {
-                    filename: model.filename,
-                    playcavasIntersects: intersects,
-                    manualIntersects: manualIntersects,
-                    intersectionPoint: intersects ? ip.toString() : (manualIntersects ? manualIP.toString() : 'none'),
-                    aabbCenter: wb.center.toString(),
-                    aabbHalfExtents: wb.halfExtents.toString(),
-                    aabbMin: aabbMin.toString(),
-                    aabbMax: aabbMax.toString(),
-                    rayOrigin: pickRay.origin.toString(),
-                    rayDirection: pickRay.direction.toString(),
-                    distanceToCenter: pickRay.origin.distance(wb.center),
-                    projectionOnRay: projectionOnRay,
-                    distanceToRay: distanceToRay,
-                    maxHalfExtent: maxHalfExtent,
-                    shouldIntersect: distanceToRay < maxHalfExtent && projectionOnRay > 0
-                });
                 // Use either PlayCanvas result or manual calculation
                 const finalIntersects = intersects || manualIntersects;
                 const finalIP = intersects ? ip : manualIP;
@@ -879,14 +789,6 @@ class Camera extends Element {
                 if (finalIntersects) {
                     const distance = finalIP.clone().sub(nearPoint).length();
                     if (Camera.debugPick) {
-                        console.log('✅ GLB AABB Hit', {
-                            model: model.filename,
-                            distance,
-                            ip: finalIP.toString(),
-                            boundCenter: wb.center.toString(),
-                            boundHalfExtents: wb.halfExtents.toString(),
-                            usedManualCalc: !intersects && manualIntersects
-                        });
                         // 画出模型聚合 AABB
                         try {
                             const app: any = (scene as any).app;
@@ -943,15 +845,7 @@ class Camera extends Element {
                 const dy = screenY - sp.y;
                 const d2 = dx * dx + dy * dy;
                 fallbackCandidates.push({ model, dist2: d2 });
-                // 调试输出
-                if (Camera.debugPick) {
-                    console.log('🔁 Fallback candidate', {
-                        model: model.filename,
-                        screenCenter: { x: sp.x, y: sp.y, z: sp.z },
-                        click: { x: screenX, y: screenY },
-                        dist2: d2
-                    });
-                }
+
             }
 
             if (fallbackCandidates.length) {
@@ -960,22 +854,10 @@ class Camera extends Element {
                 
                 // 临时测试：大幅增加阈值，确保GLB模型能被选中
                 const threshold = 10000; // 100px 半径
-                if (Camera.debugPick) {
-                    console.log('🔍 DEBUG: Fallback candidate check', {
-                        model: best.model.filename,
-                        dist2: best.dist2,
-                        threshold: threshold,
-                        willSelect: best.dist2 < threshold
-                    });
-                }
+
                 
                 if (best.dist2 < threshold) {
-                    if (Camera.debugPick) {
-                        console.log('✅ Fallback 选中模型 (projection distance)', {
-                            model: best.model.filename,
-                            dist2: best.dist2
-                        });
-                    }
+
                     scene.events.fire('camera.focalPointPicked', {
                         camera: this,
                         model: best.model,
@@ -983,9 +865,7 @@ class Camera extends Element {
                     });
                     return;
                 }
-                if (Camera.debugPick) {
-                    console.log('ℹ️ Fallback 放弃：最近模型中心距离过大', { dist2: best.dist2 });
-                }
+
             }
         }
 
@@ -1134,10 +1014,7 @@ class Camera extends Element {
     // Pick GLB models without focusing camera (for selection only)
     pickModel(screenX: number, screenY: number) {
         // Deprecated: 现在统一使用 pickFocalPoint 完成 GLB + splat 拾取
-        if (!(window as any)._warnPickModelOnce) {
-            (window as any)._warnPickModelOnce = true;
-            console.warn('[pickModel] 已废弃：请直接使用 pickFocalPoint');
-        }
+
         this.pickFocalPoint(screenX, screenY);
     }
 }

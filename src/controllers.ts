@@ -170,7 +170,7 @@ class PointerController {
 
         // 单击：拾取 GLB 或 splat 并选中（GLB 不自动移动相机，splat 维持原来逻辑）
         const click = (event: globalThis.MouseEvent) => {
-            console.log('🖱️ PICK attempt', { x: event.offsetX, y: event.offsetY });
+
             camera.pickFocalPoint(event.offsetX, event.offsetY);
         };
 

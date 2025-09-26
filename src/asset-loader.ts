@@ -277,7 +277,6 @@ class AssetLoader {
                                         radius: bound.halfExtents.length(),
                                         speed: 1
                                     });
-                                    console.log('Auto-focused camera on glTF model');
                                 }
                             }
                         });
@@ -308,16 +307,12 @@ class AssetLoader {
 
     loadModel(loadRequest: ModelLoadRequest) {
         const filename = (loadRequest.filename || loadRequest.url).toLowerCase();
-        console.log('loadModel called with filename:', filename);
         
         if (filename.endsWith('.splat')) {
-            console.log('Loading as splat file');
             return this.loadSplat(loadRequest);
         } else if (filename.endsWith('.gltf') || filename.endsWith('.glb')) {
-            console.log('Loading as glTF/GLB file');
             return this.loadGltf(loadRequest);
         }
-        console.log('Loading as PLY file');
         return this.loadPly(loadRequest);
     }
 
@@ -327,8 +322,6 @@ class AssetLoader {
         const hasLight = existingLights.length > 0;
         
         if (!hasLight) {
-            console.log('Adding basic lighting for glTF models');
-            
             // Create a single directional light
             const mainLight = new Entity('DirectionalLight');
             mainLight.addComponent('light', {
