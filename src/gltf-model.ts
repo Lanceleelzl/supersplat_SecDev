@@ -308,49 +308,50 @@ class GltfModel extends Element {
 
         if (this.visible && selected) {
             // render bounding box when selected
-            if (events.invoke('camera.bound')) {
-                const bound = this.worldBound;
-                if (bound) {
-                    // Use the same boundingPoints structure as Splat for consistency
-                    const boundingPoints = [
-                        // Bottom face edges
-                        new Vec3(-1, -1, -1), new Vec3(1, -1, -1),   // bottom front edge
-                        new Vec3(1, -1, -1), new Vec3(1, 1, -1),     // bottom right edge
-                        new Vec3(1, 1, -1), new Vec3(-1, 1, -1),     // bottom back edge
-                        new Vec3(-1, 1, -1), new Vec3(-1, -1, -1),   // bottom left edge
+            // 注释：暂时注释掉GLB模型选中时的包围盒显示功能
+            // if (events.invoke('camera.bound')) {
+            //     const bound = this.worldBound;
+            //     if (bound) {
+            //         // Use the same boundingPoints structure as Splat for consistency
+            //         const boundingPoints = [
+            //             // Bottom face edges
+            //             new Vec3(-1, -1, -1), new Vec3(1, -1, -1),   // bottom front edge
+            //             new Vec3(1, -1, -1), new Vec3(1, 1, -1),     // bottom right edge
+            //             new Vec3(1, 1, -1), new Vec3(-1, 1, -1),     // bottom back edge
+            //             new Vec3(-1, 1, -1), new Vec3(-1, -1, -1),   // bottom left edge
 
-                        // Top face edges
-                        new Vec3(-1, -1, 1), new Vec3(1, -1, 1),     // top front edge
-                        new Vec3(1, -1, 1), new Vec3(1, 1, 1),       // top right edge
-                        new Vec3(1, 1, 1), new Vec3(-1, 1, 1),       // top back edge
-                        new Vec3(-1, 1, 1), new Vec3(-1, -1, 1),     // top left edge
+            //             // Top face edges
+            //             new Vec3(-1, -1, 1), new Vec3(1, -1, 1),     // top front edge
+            //             new Vec3(1, -1, 1), new Vec3(1, 1, 1),       // top right edge
+            //             new Vec3(1, 1, 1), new Vec3(-1, 1, 1),       // top back edge
+            //             new Vec3(-1, 1, 1), new Vec3(-1, -1, 1),     // top left edge
 
-                        // Vertical edges
-                        new Vec3(-1, -1, -1), new Vec3(-1, -1, 1),   // front left vertical
-                        new Vec3(1, -1, -1), new Vec3(1, -1, 1),     // front right vertical
-                        new Vec3(1, 1, -1), new Vec3(1, 1, 1),       // back right vertical
-                        new Vec3(-1, 1, -1), new Vec3(-1, 1, 1)      // back left vertical
-                    ];
+            //             // Vertical edges
+            //             new Vec3(-1, -1, -1), new Vec3(-1, -1, 1),   // front left vertical
+            //             new Vec3(1, -1, -1), new Vec3(1, -1, 1),     // front right vertical
+            //             new Vec3(1, 1, -1), new Vec3(1, 1, 1),       // back right vertical
+            //             new Vec3(-1, 1, -1), new Vec3(-1, 1, 1)      // back left vertical
+            //         ];
 
-                    // Use worldBound to draw bounding box
-                    const scale = new Mat4().setTRS(bound.center, Quat.IDENTITY, bound.halfExtents);
+            //         // Use worldBound to draw bounding box
+            //         const scale = new Mat4().setTRS(bound.center, Quat.IDENTITY, bound.halfExtents);
 
-                    // Draw bounding box lines
-                    const veca = new Vec3();
-                    const vecb = new Vec3();
+            //         // Draw bounding box lines
+            //         const veca = new Vec3();
+            //         const vecb = new Vec3();
 
-                    for (let i = 0; i < boundingPoints.length; i += 2) {
-                        const a = boundingPoints[i];
-                        const b = boundingPoints[i + 1];
+            //         for (let i = 0; i < boundingPoints.length; i += 2) {
+            //             const a = boundingPoints[i];
+            //             const b = boundingPoints[i + 1];
 
-                        // Transform unit cube points to actual bounding box coordinates
-                        scale.transformPoint(a, veca);
-                        scale.transformPoint(b, vecb);
+            //             // Transform unit cube points to actual bounding box coordinates
+            //             scale.transformPoint(a, veca);
+            //             scale.transformPoint(b, vecb);
 
-                        this.scene.app.drawLine(veca, vecb, Color.WHITE, true, this.scene.debugLayer);
-                    }
-                }
-            }
+            //             this.scene.app.drawLine(veca, vecb, Color.WHITE, true, this.scene.debugLayer);
+            //         }
+            //     }
+            // }
         }
     }
 

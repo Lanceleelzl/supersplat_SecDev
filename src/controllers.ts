@@ -168,10 +168,73 @@ class PointerController {
         //     }
         // };
 
-        // 单击：拾取 GLB 或 splat 并选中（GLB 不自动移动相机，splat 维持原来逻辑）
-        const click = (event: globalThis.MouseEvent) => {
+        // 跟踪鼠标拖拽状态，区分点击和拖拽
+        let mouseDownPos = { x: 0, y: 0 };
+        let isDragging = false;
+        const DRAG_THRESHOLD = 5; // 像素阈值，超过这个距离认为是拖拽
 
-            camera.pickFocalPoint(event.offsetX, event.offsetY);
+        const mousedown = (event: globalThis.MouseEvent) => {
+            mouseDownPos = { x: event.offsetX, y: event.offsetY };
+            isDragging = false;
+        };
+
+        const mousemove = (event: globalThis.MouseEvent) => {
+            if (buttons[0] || buttons[1] || buttons[2]) { // 如果有按钮被按下
+                const dx = Math.abs(event.offsetX - mouseDownPos.x);
+                const dy = Math.abs(event.offsetY - mouseDownPos.y);
+                if (dx > DRAG_THRESHOLD || dy > DRAG_THRESHOLD) {
+                    isDragging = true;
+                }
+            }
+        };
+
+        // 检查点击是否在UI面板上
+        const isClickOnUI = (event: globalThis.MouseEvent): boolean => {
+            const target = event.target as HTMLElement;
+            if (!target) return false;
+            
+            // 排除canvas和canvas容器，这些是3D场景区域
+            if (target.id === 'canvas' || target.id === 'canvas-container') {
+                return false;
+            }
+            
+            // 检查是否点击在属性面板上
+            const propertiesPanel = document.getElementById('properties-panel');
+            if (propertiesPanel && propertiesPanel.contains(target)) {
+                return true;
+            }
+            
+            // 检查是否点击在其他UI面板上（通过CSS类名）
+            let element = target;
+            while (element && element !== document.body) {
+                // 再次确保不是canvas相关元素
+                if (element.id === 'canvas' || element.id === 'canvas-container') {
+                    return false;
+                }
+                
+                if (element.classList && (
+                    element.classList.contains('panel') ||
+                    element.classList.contains('pcui-container') ||
+                    element.classList.contains('pcui-element') ||
+                    element.classList.contains('menu-panel') ||
+                    (element.id && element.id.includes('panel') && element.id !== 'canvas-container')
+                )) {
+                    return true;
+                }
+                element = element.parentElement as HTMLElement;
+            }
+            
+            return false;
+        };
+
+        // 单击：只有在非拖拽状态且未点击UI时才进行拾取选择
+        const click = (event: globalThis.MouseEvent) => {
+            // 只有真正的点击（非拖拽）且不在UI面板上才触发选择逻辑
+            if (!isDragging && !isClickOnUI(event)) {
+                camera.pickFocalPoint(event.offsetX, event.offsetY);
+            }
+            // 重置拖拽状态
+            isDragging = false;
         };
 
         // key state
@@ -227,6 +290,8 @@ class PointerController {
         wrap(target, 'pointermove', pointermove);
         wrap(target, 'wheel', wheel, { passive: false });
         // wrap(target, 'dblclick', dblclick); // 禁用双击事件，只使用单击选择
+        wrap(target, 'mousedown', mousedown); // 添加鼠标按下事件监听
+        wrap(target, 'mousemove', mousemove); // 添加鼠标移动事件监听
         wrap(target, 'click', click);
         wrap(document, 'keydown', keydown);
         wrap(document, 'keyup', keyup);

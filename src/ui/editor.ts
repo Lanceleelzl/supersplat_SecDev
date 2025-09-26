@@ -13,6 +13,7 @@ import { ModeToggle } from './mode-toggle';
 import logo from './playcanvas-logo.png';
 import { Popup, ShowOptions } from './popup';
 import { Progress } from './progress';
+import { PropertiesPanel } from './properties-panel';
 import { PublishSettingsDialog } from './publish-settings-dialog';
 import { RightToolbar } from './right-toolbar';
 import { ScenePanel } from './scene-panel';
@@ -140,6 +141,10 @@ class EditorUI {
         events.on('prerender', (cameraMatrix: Mat4) => {
             viewCube.update(cameraMatrix);
         });
+
+        // properties panel - 属性面板，与场景面板同级显示在视口范围内
+        const propertiesPanel = new PropertiesPanel(events, tooltips);
+        canvasContainer.append(propertiesPanel);
 
         // main container
         const mainContainer = new Container({

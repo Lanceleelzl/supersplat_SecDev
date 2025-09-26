@@ -22,15 +22,20 @@ const registerSelectionEvents = (events: Events, scene: Scene) => {
             selection = element;
             events.fire('selection.changed', selection, prev);
             
-            // 仅当用户点击时（非自动选择）为GLB模型显示信息弹窗
-            if (element && element.type === ElementType.model && fromUserInteraction) {
-                const model = element as GltfModel;
-                events.invoke('showPopup', {
-                    type: 'info',
-                    header: '模型已选择',
-                    message: `选中的模型: ${model.filename || '未知'}\n类型: GLB/glTF 模型\n可见: ${model.visible ? '是' : '否'}`
-                });
+            // 强制渲染以立即更新高亮效果
+            if (scene.forceRender !== undefined) {
+                scene.forceRender = true;
             }
+            
+            // 注释：关闭GLB模型选择时的弹窗提示，改用右上角属性面板显示信息
+            // if (element && element.type === ElementType.model && fromUserInteraction) {
+            //     const model = element as GltfModel;
+            //     events.invoke('showPopup', {
+            //         type: 'info',
+            //         header: '模型已选择',
+            //         message: `选中的模型: ${model.filename || '未知'}\n类型: GLB/glTF 模型\n可见: ${model.visible ? '是' : '否'}`
+            //     });
+            // }
         }
     };
 
@@ -86,6 +91,9 @@ const registerSelectionEvents = (events: Events, scene: Scene) => {
             setSelection(details.splat, true); // true indicates user interaction
         } else if (details.model) {
             setSelection(details.model, true); // true indicates user interaction
+        } else {
+            // 点击空白区域时清空选择
+            setSelection(null, true);
         }
     });
 };

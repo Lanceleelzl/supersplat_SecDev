@@ -20,6 +20,7 @@
 @use 'progress.scss';
 @use 'export-popup.scss';
 @use 'timeline-panel.scss';
+@use 'properties-panel.scss';
 
 * {
     font-size: 12px;
@@ -120,8 +121,8 @@ body {
 
 #cursor-label {
     position: absolute;
-    left: 12px;
-    bottom: 12px;
+    right: 170px;
+    bottom: 20px;
     color: $text-primary;
     text-shadow: 1px 1px 4px black;
 

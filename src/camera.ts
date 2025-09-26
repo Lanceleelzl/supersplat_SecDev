@@ -921,6 +921,12 @@ class Camera extends Element {
                 splat: closestSplat,
                 position: closestP
             });
+        } else {
+            // 点击空白区域时也触发事件，用于清空选择
+            scene.events.fire('camera.focalPointPicked', {
+                camera: this,
+                position: new Vec3() // 提供一个默认位置
+            });
         }
     }
 

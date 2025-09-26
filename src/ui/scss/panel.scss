@@ -12,8 +12,14 @@
         flex-direction: row;
         align-items: center;
         padding: 2px;
+        cursor: move;
+        user-select: none;
 
         background-color: $bcg-dark;
+
+        &:hover {
+            background-color: $bcg-light;
+        }
 
         & > .panel-header-icon {
             font-family: pc-icon;

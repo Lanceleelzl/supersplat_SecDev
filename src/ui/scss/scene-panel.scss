@@ -1,7 +1,9 @@
 #scene-panel {
-    top: 102px;
-    left: 24px;
+    position: absolute;
+    top: 58px;
+    left: 0px;
     width: 320px;
+    z-index: 100;
 }
 
 .collapsed #scene-panel {

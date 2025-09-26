@@ -56,6 +56,11 @@ class Outline extends Element {
                 const model = element as GltfModel;
                 this.addModelToOutlineLayer(model, layerId);
             }
+            
+            // 强制渲染以立即更新高亮效果
+            if (this.scene.forceRender !== undefined) {
+                this.scene.forceRender = true;
+            }
         });
 
         // render overlay layer only
@@ -121,23 +126,50 @@ class Outline extends Element {
         }
     }
 
+    // Add entity to a specific layer
+    private addEntityToLayer(entity: Entity, layer: Layer) {
+        if (entity.render && entity.render.meshInstances) {
+            entity.render.meshInstances.forEach((meshInstance: any) => {
+                layer.addMeshInstances([meshInstance]);
+            });
+        }
+
+        // Recursively handle children
+        entity.children.forEach((child: Entity) => {
+            this.addEntityToLayer(child, layer);
+        });
+    }
+
+    // Remove entity from a specific layer
+    private removeEntityFromLayer(entity: Entity, layer: Layer) {
+        if (entity.render && entity.render.meshInstances) {
+            entity.render.meshInstances.forEach((meshInstance: any) => {
+                layer.removeMeshInstances([meshInstance]);
+            });
+        }
+
+        // Recursively handle children
+        entity.children.forEach((child: Entity) => {
+            this.removeEntityFromLayer(child, layer);
+        });
+    }
+
     // Recursively set outline layer for entity and its children
     private setEntityOutlineLayer(entity: Entity, layerId: number, add: boolean) {
         // Handle render components
         if (entity.render && entity.render.meshInstances) {
-            entity.render.meshInstances.forEach((meshInstance: any) => {
-                if (add) {
-                    // Add to outline layer if not already there
-                    if (!meshInstance.layer || meshInstance.layer.indexOf(layerId) === -1) {
-                        meshInstance.layer = meshInstance.layer ? [...meshInstance.layer, layerId] : [layerId];
+            const layer = this.scene.app.scene.layers.getLayerById(layerId);
+            if (layer) {
+                entity.render.meshInstances.forEach((meshInstance: any) => {
+                    if (add) {
+                        // Add mesh instance to outline layer
+                        layer.addMeshInstances([meshInstance]);
+                    } else {
+                        // Remove mesh instance from outline layer
+                        layer.removeMeshInstances([meshInstance]);
                     }
-                } else {
-                    // Remove from outline layer
-                    if (meshInstance.layer) {
-                        meshInstance.layer = meshInstance.layer.filter((id: number) => id !== layerId);
-                    }
-                }
-            });
+                });
+            }
         }
 
         // Recursively handle children

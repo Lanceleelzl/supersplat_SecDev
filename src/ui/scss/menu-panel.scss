@@ -2,6 +2,7 @@
 
 .menu-panel {
     position: absolute;
+    z-index: 2000; // 确保菜单面板在所有其他面板之上
 
     &::not(.pcui-hidden) {
         display: flex;

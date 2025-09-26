@@ -1,0 +1,108 @@
+@use 'colors' as *;
+
+#properties-panel {
+    position: absolute;
+    top: 390px;
+    left: 0px;
+    width: 320px;
+    z-index: 100;
+}
+
+.collapsed #properties-panel {
+    display: none;
+}
+
+.properties-info-container {
+    max-height: 400px;
+    overflow: auto;
+}
+
+.properties-section-header {
+    color: $text-primary;
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid $bcg-light;
+}
+
+.properties-info-label {
+    color: $text-secondary;
+    font-size: 12px;
+    line-height: 1.4;
+    margin-bottom: 6px;
+    padding: 4px 8px;
+    background-color: $bcg-darker;
+    border-radius: 3px;
+    font-family: 'Consolas', 'Monaco', 'Lucida Console', monospace;
+    
+    &:hover {
+        background-color: $bcg-light;
+    }
+}
+
+.properties-spacer {
+    height: 12px;
+}
+
+.properties-placeholder {
+    color: $text-secondary;
+    font-size: 12px;
+    text-align: center;
+    padding: 20px;
+    font-style: italic;
+}
+
+// 关闭按钮样式
+.panel-header-close {
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 3px;
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    
+    // SVG图标样式
+    svg {
+        width: 16px;
+        height: 16px;
+        transition: all 0.2s ease;
+        
+        path {
+            fill: $text-secondary;
+        }
+    }
+    
+    &:hover {
+        background-color: $bcg-light;
+        
+        svg path {
+            fill: $text-primary;
+        }
+    }
+    
+    &:active {
+        background-color: $bcg-lighter;
+    }
+}
+
+// 滚动条样式
+.properties-info-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.properties-info-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.properties-info-container::-webkit-scrollbar-thumb {
+    background: $bcg-light;
+    border-radius: 3px;
+    
+    &:hover {
+        background: $bcg-lighter;
+    }
+}
