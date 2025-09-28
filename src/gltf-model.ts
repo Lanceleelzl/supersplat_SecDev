@@ -15,10 +15,10 @@ class GltfModel extends Element {
         super(ElementType.model);
         this.asset = asset;
         this.entity = entity;
-        
+
         // Ensure the model is visible by default
         this.visible = true;
-        
+
         // Setup physics picking if available
         try {
             this.setupPhysicsPicking();
@@ -45,10 +45,10 @@ class GltfModel extends Element {
 
         const collider = new Entity('__gltfCollider');
         const he = bound.halfExtents.clone();
-        
+
         const worldCenter = bound.center.clone();
         collider.setPosition(worldCenter);
-        
+
         collider.addComponent('collision', {
             type: 'box',
             halfExtents: he
@@ -94,7 +94,7 @@ class GltfModel extends Element {
         let first = true;
         for (const mi of meshInstances) {
             if (!mi.aabb) continue;
-            
+
             if (first) {
                 bound.copy(mi.aabb);
                 first = false;
@@ -102,7 +102,7 @@ class GltfModel extends Element {
                 bound.add(mi.aabb);
             }
         }
-        
+
         return bound;
     }
 
@@ -119,7 +119,7 @@ class GltfModel extends Element {
         .map((render: any) => render.meshInstances)
         .flat()
         .filter((mi: any) => mi && mi.aabb);
-        
+
         if (!meshInstances.length) {
             return null;
         }
@@ -130,7 +130,7 @@ class GltfModel extends Element {
         let first = true;
         for (const mi of meshInstances) {
             if (!mi.aabb) continue;
-            
+
             if (first) {
                 bound.copy(mi.aabb);
                 first = false;
@@ -145,12 +145,12 @@ class GltfModel extends Element {
 
     serialize(serializer: any) {
         super.serialize(serializer);
-        
+
         // Store basic model information for potential future use
         const position = this.entity.getPosition();
         const rotation = this.entity.getRotation();
         const scale = this.entity.getLocalScale();
-        
+
         // Could be used for saving/loading scene state
         const modelData = {
             filename: this.filename,
@@ -158,7 +158,7 @@ class GltfModel extends Element {
             rotation: [rotation.x, rotation.y, rotation.z, rotation.w],
             scale: [scale.x, scale.y, scale.z]
         };
-        
+
         // Store in serializer if needed
         if (serializer && serializer.setModelData) {
             serializer.setModelData(this.uid, modelData);
@@ -176,7 +176,7 @@ class GltfModel extends Element {
             if (scale) {
                 this.entity.setLocalScale(scale);
             }
-            
+
             // Mark world bounds as dirty since the model moved
             this.makeWorldBoundDirty();
 
@@ -205,17 +205,17 @@ class GltfModel extends Element {
                     }
                 }
             } catch { /* ignore collider sync errors */ }
-            
+
             // Force scene to re-render immediately
             if (this.scene) {
                 this.scene.forceRender = true;
             }
-            
+
             // Fire transform event for selection system and other listeners
             this.scene?.events.fire('model.moved', this);
         }
     }
-    
+
     makeWorldBoundDirty() {
         this._cachedWorldBound = null;
         this._cachedWorldBoundFrame = -1;
@@ -239,7 +239,7 @@ class GltfModel extends Element {
                     this.scene.app.root.addChild(this.entity);
                 }
                 this.entity.enabled = true;
-                
+
                 // Enable all render components recursively
                 const enableRendering = (entity: Entity) => {
                     const render = entity.render;
@@ -251,7 +251,7 @@ class GltfModel extends Element {
                             });
                         }
                     }
-                    
+
                     entity.children.forEach((child) => {
                         if (child instanceof Entity) {
                             child.enabled = true;
@@ -263,7 +263,7 @@ class GltfModel extends Element {
             } else {
                 // Make invisible: disable entity and rendering
                 this.entity.enabled = false;
-                
+
                 // Disable all render components recursively
                 const disableRendering = (entity: Entity) => {
                     const render = entity.render;
@@ -275,7 +275,7 @@ class GltfModel extends Element {
                             });
                         }
                     }
-                    
+
                     entity.children.forEach((child) => {
                         if (child instanceof Entity) {
                             child.enabled = false;
@@ -285,12 +285,12 @@ class GltfModel extends Element {
                 };
                 disableRendering(this.entity);
             }
-            
+
             // Force scene to re-render immediately
             if (this.scene) {
                 this.scene.forceRender = true;
             }
-            
+
             // Fire visibility event for selection system
             this.scene?.events.fire('model.visibility', this);
         }

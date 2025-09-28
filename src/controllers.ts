@@ -192,18 +192,18 @@ class PointerController {
         const isClickOnUI = (event: globalThis.MouseEvent): boolean => {
             const target = event.target as HTMLElement;
             if (!target) return false;
-            
+
             // 排除canvas和canvas容器，这些是3D场景区域
             if (target.id === 'canvas' || target.id === 'canvas-container') {
                 return false;
             }
-            
+
             // 检查是否点击在属性面板上
             const propertiesPanel = document.getElementById('properties-panel');
             if (propertiesPanel && propertiesPanel.contains(target)) {
                 return true;
             }
-            
+
             // 检查是否点击在其他UI面板上（通过CSS类名）
             let element = target;
             while (element && element !== document.body) {
@@ -211,7 +211,7 @@ class PointerController {
                 if (element.id === 'canvas' || element.id === 'canvas-container') {
                     return false;
                 }
-                
+
                 if (element.classList && (
                     element.classList.contains('panel') ||
                     element.classList.contains('pcui-container') ||
@@ -223,7 +223,7 @@ class PointerController {
                 }
                 element = element.parentElement as HTMLElement;
             }
-            
+
             return false;
         };
 

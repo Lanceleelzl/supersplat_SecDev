@@ -242,16 +242,16 @@ class AssetLoader {
                     const containerResource = asset.resource as ContainerResource;
                     const entity = containerResource.instantiateRenderEntity();
                     entity.name = loadRequest.filename || loadRequest.url || 'glTF Model';
-                    
+
                     // Add to the scene root
                     this.app.root.addChild(entity);
-                    
+
                     // Add basic lighting if not present
                     this.ensureBasicLighting();
-                    
+
                     // Configure lighting for the model
                     this.configureMaterialsForLighting(entity);
-                    
+
                     const gltfModel = new GltfModel(asset, entity);
                     // 若当前还没有加入 scene.elements，需要显式加入
                     // 加入 Scene.elements 的职责应在外层统一处理；这里通过事件让主场景监听添加
@@ -262,7 +262,7 @@ class AssetLoader {
                     } catch (e) {
                         console.warn('Physics picking setup failed (non-fatal):', e);
                     }
-                    
+
                     // Auto-focus camera on the newly loaded model
                     const bound = gltfModel.worldBound;
                     if (bound) {
@@ -281,7 +281,7 @@ class AssetLoader {
                             }
                         });
                     }
-                    
+
                     // 通过事件通知外部逻辑将该元素加入 Scene（若外层未自动处理）
                     try {
                         this.events.fire('model.loaded.gltf', gltfModel);
@@ -307,7 +307,7 @@ class AssetLoader {
 
     loadModel(loadRequest: ModelLoadRequest) {
         const filename = (loadRequest.filename || loadRequest.url).toLowerCase();
-        
+
         if (filename.endsWith('.splat')) {
             return this.loadSplat(loadRequest);
         } else if (filename.endsWith('.gltf') || filename.endsWith('.glb')) {
@@ -320,7 +320,7 @@ class AssetLoader {
         // Check if there's already lighting
         const existingLights = this.app.root.findComponents('light');
         const hasLight = existingLights.length > 0;
-        
+
         if (!hasLight) {
             // Create a single directional light
             const mainLight = new Entity('DirectionalLight');
@@ -333,7 +333,7 @@ class AssetLoader {
             mainLight.setPosition(10, 10, 10);
             mainLight.lookAt(0, 0, 0);
             this.app.root.addChild(mainLight);
-            
+
             // Set scene ambient light for overall illumination
             this.app.scene.ambientLight = new Color(0.4, 0.4, 0.4);
         }
@@ -351,21 +351,21 @@ class AssetLoader {
                         if (material.unlit === undefined) {
                             material.unlit = false;
                         }
-                        
+
                         // Enable double-sided rendering to fix black backfaces
                         material.twoSidedLighting = true;
                         material.cull = CULLFACE_NONE; // Disable backface culling
-                        
+
                         // Ensure proper lighting model
                         if (material.shadingModel === undefined) {
                             material.shadingModel = 1; // SPECULARGLOSINESS
                         }
-                        
+
                         // Add some ambient lighting if the material is too dark
                         if (!material.ambient) {
                             material.ambient = [0.2, 0.2, 0.2];
                         }
-                        
+
                         material.update();
                     }
                 });

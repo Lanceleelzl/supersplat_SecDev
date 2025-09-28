@@ -57,11 +57,11 @@ class InfiniteGrid extends Element {
                 // Set required shader uniforms
                 const { camera } = this.scene;
                 const cameraEntity = camera.entity;
-                
+
                 // Set view_position uniform
                 const viewPosition = cameraEntity.getPosition();
                 device.scope.resolve('view_position').setValue([viewPosition.x, viewPosition.y, viewPosition.z]);
-                
+
                 // Set matrix_viewProjection uniform
                 const viewProjectionMatrix = cameraEntity.camera.projectionMatrix.clone().mul(cameraEntity.camera.viewMatrix);
                 device.scope.resolve('matrix_viewProjection').setValue(viewProjectionMatrix.data);

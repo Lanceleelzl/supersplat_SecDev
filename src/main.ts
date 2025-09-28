@@ -224,7 +224,7 @@ const main = async () => {
     setSelectedClr(toColor(sceneConfig.selectedClr));
     setUnselectedClr(toColor(sceneConfig.unselectedClr));
     setLockedClr(toColor(sceneConfig.lockedClr));
-    
+
     // 初始化轮廓选择
     events.fire('view.setOutlineSelection', sceneConfig.show.outlineSelection);
 

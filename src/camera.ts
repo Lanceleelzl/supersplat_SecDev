@@ -460,7 +460,7 @@ class Camera extends Element {
         if (dist > 0) {
             // Set far plane with some extra margin
             this.far = Math.max(boundRadius * 4, dist + boundRadius * 2);
-            
+
             // Calculate near plane more carefully
             if (dist < boundRadius) {
                 // Camera is inside or very close to the bounding sphere
@@ -474,7 +474,7 @@ class Camera extends Element {
             this.far = boundRadius * 6;
             this.near = Math.max(0.001, boundRadius / 10000);
         }
-        
+
         // Ensure near is always smaller than far
         if (this.near >= this.far) {
             this.near = this.far / 1000;
@@ -722,50 +722,50 @@ class Camera extends Element {
                 modelBounds.push({ model, bound: wb });
                 const ip = new Vec3();
                 const intersects = wb.intersectsRay(pickRay, ip);
-                
+
                 // Manual ray-AABB intersection test as fallback
                 let manualIntersects = false;
                 const manualIP = new Vec3();
-                
+
                 // Implement our own ray-AABB intersection
                 const rayOrigin = pickRay.origin;
                 const rayDirection = pickRay.direction;
                 const aabbMin = wb.getMin();
                 const aabbMax = wb.getMax();
-                
+
                 let tmin = (aabbMin.x - rayOrigin.x) / rayDirection.x;
                 let tmax = (aabbMax.x - rayOrigin.x) / rayDirection.x;
-                
+
                 if (tmin > tmax) {
                     const temp = tmin;
                     tmin = tmax;
                     tmax = temp;
                 }
-                
+
                 let tymin = (aabbMin.y - rayOrigin.y) / rayDirection.y;
                 let tymax = (aabbMax.y - rayOrigin.y) / rayDirection.y;
-                
+
                 if (tymin > tymax) {
                     const temp = tymin;
                     tymin = tymax;
                     tymax = temp;
                 }
-                
+
                 if (tmin > tymax || tymin > tmax) {
                     manualIntersects = false;
                 } else {
                     tmin = Math.max(tmin, tymin);
                     tmax = Math.min(tmax, tymax);
-                    
+
                     let tzmin = (aabbMin.z - rayOrigin.z) / rayDirection.z;
                     let tzmax = (aabbMax.z - rayOrigin.z) / rayDirection.z;
-                    
+
                     if (tzmin > tzmax) {
                         const temp = tzmin;
                         tzmin = tzmax;
                         tzmax = temp;
                     }
-                    
+
                     if (tmin > tzmax || tzmin > tmax) {
                         manualIntersects = false;
                     } else {
@@ -776,17 +776,17 @@ class Camera extends Element {
                         }
                     }
                 }
-                
+
                 // Additional debugging: manually test if the ray should intersect
                 const rayToCenter = wb.center.clone().sub(pickRay.origin);
                 const projectionOnRay = rayToCenter.dot(pickRay.direction);
                 const distanceToRay = rayToCenter.clone().sub(pickRay.direction.clone().mulScalar(projectionOnRay)).length();
                 const maxHalfExtent = Math.max(wb.halfExtents.x, wb.halfExtents.y, wb.halfExtents.z);
-                
+
                 // Use either PlayCanvas result or manual calculation
                 const finalIntersects = intersects || manualIntersects;
                 const finalIP = intersects ? ip : manualIP;
-                
+
                 if (finalIntersects) {
                     const distance = finalIP.clone().sub(nearPoint).length();
                     if (Camera.debugPick) {
@@ -852,11 +852,11 @@ class Camera extends Element {
             if (fallbackCandidates.length) {
                 fallbackCandidates.sort((a, b) => a.dist2 - b.dist2);
                 const best = fallbackCandidates[0];
-                
+
                 // 临时测试：大幅增加阈值，确保GLB模型能被选中
                 const threshold = 10000; // 100px 半径
 
-                
+
                 if (best.dist2 < threshold) {
 
                     scene.events.fire('camera.focalPointPicked', {

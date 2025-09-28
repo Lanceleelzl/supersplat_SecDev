@@ -47,7 +47,7 @@ class Outline extends Element {
                 const prevModel = prev as GltfModel;
                 this.removeModelFromOutlineLayer(prevModel, layerId);
             }
-            
+
             // Add current selection to outline layer
             if (element && element.type === ElementType.splat) {
                 const splat = element as Splat;
@@ -56,7 +56,7 @@ class Outline extends Element {
                 const model = element as GltfModel;
                 this.addModelToOutlineLayer(model, layerId);
             }
-            
+
             // 强制渲染以立即更新高亮效果
             if (this.scene.forceRender !== undefined) {
                 this.scene.forceRender = true;

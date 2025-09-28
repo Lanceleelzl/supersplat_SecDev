@@ -210,7 +210,7 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement) 
     const importFiles = async (files: ImportFile[], animationFrame = false) => {
 
         const filenames = files.map(f => f.filename.toLowerCase());
-        
+
         const result = [];
 
         if (isPlySequence(filenames)) {

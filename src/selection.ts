@@ -21,12 +21,12 @@ const registerSelectionEvents = (events: Events, scene: Scene) => {
             const prev = selection;
             selection = element;
             events.fire('selection.changed', selection, prev);
-            
+
             // 强制渲染以立即更新高亮效果
             if (scene.forceRender !== undefined) {
                 scene.forceRender = true;
             }
-            
+
             // 注释：关闭GLB模型选择时的弹窗提示，改用右上角属性面板显示信息
             // if (element && element.type === ElementType.model && fromUserInteraction) {
             //     const model = element as GltfModel;

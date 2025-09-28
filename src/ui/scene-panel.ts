@@ -115,45 +115,45 @@ class ScenePanel extends Container {
         if (headerElements.length > 0) {
             dragHandle = headerElements[0] as HTMLElement;
             dragHandle.style.cursor = 'move';
-            
+
             const onPointerDown = (e: PointerEvent) => {
                 // 只响应左键点击
                 if (e.button !== 0) return;
-                
+
                 isDragging = true;
                 const rect = this.dom.getBoundingClientRect();
                 dragOffset.x = e.clientX - rect.left;
                 dragOffset.y = e.clientY - rect.top;
-                
+
                 // 设置面板为绝对定位
                 this.dom.style.position = 'absolute';
                 this.dom.style.zIndex = '1000';
-                
+
                 // 捕获指针，确保鼠标移出元素时仍能响应事件
                 dragHandle!.setPointerCapture(e.pointerId);
-                
+
                 e.preventDefault();
                 e.stopPropagation();
             };
 
             const onPointerMove = (e: PointerEvent) => {
                 if (!isDragging) return;
-                
+
                 const newX = e.clientX - dragOffset.x;
                 const newY = e.clientY - dragOffset.y;
-                
+
                 // 限制拖拽范围在窗口内
                 const maxX = window.innerWidth - this.dom.offsetWidth;
                 const maxY = window.innerHeight - this.dom.offsetHeight;
-                
+
                 const clampedX = Math.max(0, Math.min(newX, maxX));
                 const clampedY = Math.max(0, Math.min(newY, maxY));
-                
+
                 this.dom.style.left = `${clampedX}px`;
                 this.dom.style.top = `${clampedY}px`;
                 this.dom.style.right = 'auto';
                 this.dom.style.bottom = 'auto';
-                
+
                 e.preventDefault();
             };
 
@@ -161,7 +161,7 @@ class ScenePanel extends Container {
                 if (isDragging) {
                     isDragging = false;
                     this.dom.style.zIndex = '100';
-                    
+
                     // 释放指针捕获
                     if (dragHandle!.hasPointerCapture(e.pointerId)) {
                         dragHandle!.releasePointerCapture(e.pointerId);
@@ -173,7 +173,7 @@ class ScenePanel extends Container {
             dragHandle.addEventListener('pointerdown', onPointerDown);
             dragHandle.addEventListener('pointermove', onPointerMove);
             dragHandle.addEventListener('pointerup', onPointerUp);
-            
+
             // 处理指针取消事件（例如触摸被中断）
             dragHandle.addEventListener('pointercancel', onPointerUp);
         }
