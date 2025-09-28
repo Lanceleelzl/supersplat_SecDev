@@ -286,10 +286,10 @@ class ContextMenu extends Container {
                 // 使用正确的删除方法
                 this.currentModel.destroy();
                 console.log('模型删除成功:', this.currentModel.filename);
-                
+
                 // 清除当前模型引用
                 this.currentModel = null;
-                
+
                 // 隐藏菜单
                 this.hide();
             }
