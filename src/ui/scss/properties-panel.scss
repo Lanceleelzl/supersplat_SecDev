@@ -26,6 +26,34 @@
     border-bottom: 1px solid $bcg-light;
 }
 
+.collapsible-header {
+    color: $text-primary;
+    font-weight: 600;
+    font-size: 13px;
+    margin-bottom: 8px;
+    padding: 4px 8px;
+    border-bottom: 1px solid $bcg-light;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s ease;
+    border-radius: 3px;
+    margin: 0 -8px 8px -8px;
+    
+    &:hover {
+        background-color: $bcg-light;
+        color: $text-primary;
+    }
+    
+    &:active {
+        background-color: $bcg-lighter;
+    }
+}
+
+.collapsible-content {
+    margin-left: 8px;
+    transition: opacity 0.2s ease;
+}
+
 .properties-info-label {
     color: $text-secondary;
     font-size: 12px;
@@ -43,6 +71,10 @@
 
 .properties-spacer {
     height: 12px;
+}
+
+.properties-section-spacer {
+    height: 4px;
 }
 
 .properties-placeholder {

@@ -35,6 +35,19 @@ class PropertiesPanel extends Container {
     rotationLabel: Label;
     scaleLabel: Label;
 
+    // 可折叠容器和标题
+    basicInfoHeader: Label;
+    geometryHeader: Label;
+    transformHeader: Label;
+    basicInfoContainer: Container;
+    geometryContainer: Container;
+    transformContainer: Container;
+
+    // 折叠状态
+    private basicInfoCollapsed: boolean = false;
+    private geometryCollapsed: boolean = false;
+    private transformCollapsed: boolean = false;
+
     constructor(events: Events, tooltips: Tooltips, args = {}) {
         args = {
             ...args,
@@ -98,9 +111,13 @@ class PropertiesPanel extends Container {
         });
 
         // 基本信息section
-        const basicInfoHeader = new Label({
-            text: '基本信息',
-            class: 'properties-section-header'
+        this.basicInfoHeader = new Label({
+            text: '▼ 基本信息',
+            class: 'collapsible-header'
+        });
+
+        this.basicInfoContainer = new Container({
+            class: 'collapsible-content'
         });
 
         this.nameLabel = new Label({
@@ -113,10 +130,18 @@ class PropertiesPanel extends Container {
             class: 'properties-info-label'
         });
 
+        // 将基本信息标签添加到容器
+        this.basicInfoContainer.append(this.nameLabel);
+        this.basicInfoContainer.append(this.typeLabel);
+
         // 几何信息section
-        const geometryHeader = new Label({
-            text: '几何信息',
-            class: 'properties-section-header'
+        this.geometryHeader = new Label({
+            text: '▼ 几何信息',
+            class: 'collapsible-header'
+        });
+
+        this.geometryContainer = new Container({
+            class: 'collapsible-content'
         });
 
         this.boundingBoxLabel = new Label({
@@ -134,10 +159,19 @@ class PropertiesPanel extends Container {
             class: 'properties-info-label'
         });
 
+        // 将几何信息标签添加到容器
+        this.geometryContainer.append(this.boundingBoxLabel);
+        this.geometryContainer.append(this.verticesLabel);
+        this.geometryContainer.append(this.facesLabel);
+
         // 变换信息section
-        const transformHeader = new Label({
-            text: '变换信息',
-            class: 'properties-section-header'
+        this.transformHeader = new Label({
+            text: '▼ 变换信息',
+            class: 'collapsible-header'
+        });
+
+        this.transformContainer = new Container({
+            class: 'collapsible-content'
         });
 
         this.positionLabel = new Label({
@@ -155,22 +189,30 @@ class PropertiesPanel extends Container {
             class: 'properties-info-label'
         });
 
+        // 将变换信息标签添加到容器
+        this.transformContainer.append(this.positionLabel);
+        this.transformContainer.append(this.rotationLabel);
+        this.transformContainer.append(this.scaleLabel);
+
+        // 添加点击事件处理
+        this.addCollapsibleEvents();
+
         // 添加所有元素到容器
-        this.infoContainer.append(basicInfoHeader);
-        this.infoContainer.append(this.nameLabel);
-        this.infoContainer.append(this.typeLabel);
+        // 基本信息部分
+        this.infoContainer.append(this.basicInfoHeader);
+        this.infoContainer.append(this.basicInfoContainer);
         
         this.infoContainer.append(new Container({ class: 'properties-spacer' }));
-        this.infoContainer.append(geometryHeader);
-        this.infoContainer.append(this.boundingBoxLabel);
-        this.infoContainer.append(this.verticesLabel);
-        this.infoContainer.append(this.facesLabel);
+        
+        // 几何信息部分
+        this.infoContainer.append(this.geometryHeader);
+        this.infoContainer.append(this.geometryContainer);
         
         this.infoContainer.append(new Container({ class: 'properties-spacer' }));
-        this.infoContainer.append(transformHeader);
-        this.infoContainer.append(this.positionLabel);
-        this.infoContainer.append(this.rotationLabel);
-        this.infoContainer.append(this.scaleLabel);
+        
+        // 变换信息部分
+        this.infoContainer.append(this.transformHeader);
+        this.infoContainer.append(this.transformContainer);
 
         // 占位符，当没有选中模型时显示
         this.placeholder = new Label({
@@ -459,6 +501,47 @@ class PropertiesPanel extends Container {
             // 处理指针取消事件（例如触摸被中断）
             dragHandle.addEventListener('pointercancel', onPointerUp);
         }
+    }
+
+    private addCollapsibleEvents() {
+        // 基本信息点击事件
+        this.basicInfoHeader.dom.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.toggleBasicInfo();
+        });
+
+        // 几何信息点击事件
+        this.geometryHeader.dom.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.toggleGeometry();
+        });
+
+        // 变换信息点击事件
+        this.transformHeader.dom.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.toggleTransform();
+        });
+    }
+
+    private toggleBasicInfo() {
+        this.basicInfoCollapsed = !this.basicInfoCollapsed;
+        this.basicInfoContainer.hidden = this.basicInfoCollapsed;
+        this.basicInfoHeader.text = this.basicInfoCollapsed ? '▶ 基本信息' : '▼ 基本信息';
+    }
+
+    private toggleGeometry() {
+        this.geometryCollapsed = !this.geometryCollapsed;
+        this.geometryContainer.hidden = this.geometryCollapsed;
+        this.geometryHeader.text = this.geometryCollapsed ? '▶ 几何信息' : '▼ 几何信息';
+    }
+
+    private toggleTransform() {
+        this.transformCollapsed = !this.transformCollapsed;
+        this.transformContainer.hidden = this.transformCollapsed;
+        this.transformHeader.text = this.transformCollapsed ? '▶ 变换信息' : '▼ 变换信息';
     }
 }
 
