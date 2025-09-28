@@ -149,6 +149,74 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         }
     };
 
+    // 高斯泼溅模型复制辅助函数
+    const duplicateSplatModel = (originalSplat: Splat, scene: Scene): Splat | null => {
+        try {
+            // 获取原始模型的信息
+            const originalName = originalSplat.name || originalSplat.filename;
+
+            // 检查是否有可用的资产引用
+            if (!originalSplat.asset) {
+                console.warn('无法复制高斯泼溅模型：缺少资产引用');
+                return null;
+            }
+
+            // 创建新的名称，使用中文"_复制"
+            const copyName = originalName ? `${originalName}_复制` : '高斯泼溅_复制';
+
+            // 创建新的Splat实例
+            const duplicatedSplat = new Splat(originalSplat.asset);
+
+            if (duplicatedSplat) {
+                // 设置新名称
+                duplicatedSplat.name = copyName;
+
+                // 复制变换信息，保持原位（不偏移）
+                const originalPos = originalSplat.entity.getPosition();
+                const originalRot = originalSplat.entity.getRotation();
+                const originalScale = originalSplat.entity.getLocalScale();
+
+                // 设置新模型的位置，保持原位复制
+                duplicatedSplat.entity.setPosition(originalPos.x, originalPos.y, originalPos.z);
+                duplicatedSplat.entity.setRotation(originalRot);
+                duplicatedSplat.entity.setLocalScale(originalScale);
+
+                // 复制其他属性
+                duplicatedSplat.visible = originalSplat.visible;
+                duplicatedSplat._tintClr.copy(originalSplat._tintClr);
+                duplicatedSplat._temperature = originalSplat._temperature;
+                duplicatedSplat._saturation = originalSplat._saturation;
+                duplicatedSplat._brightness = originalSplat._brightness;
+                duplicatedSplat._blackPoint = originalSplat._blackPoint;
+                duplicatedSplat._whitePoint = originalSplat._whitePoint;
+                duplicatedSplat._transparency = originalSplat._transparency;
+
+                // 将实体添加到PlayCanvas的根节点
+                scene.app.root.addChild(duplicatedSplat.entity);
+
+                // 将新模型添加到场景
+                scene.add(duplicatedSplat);
+
+                // 强制刷新场景显示和渲染
+                scene.forceRender = true;
+
+                // 立即触发一次渲染更新
+                setTimeout(() => {
+                    scene.forceRender = true;
+                }, 10);
+
+                console.log('高斯泼溅模型复制完成:', copyName, '实体已添加到根节点');
+
+                return duplicatedSplat;
+            }
+
+            return null;
+        } catch (error) {
+            console.error('复制高斯泼溅模型时出错:', error);
+            return null;
+        }
+    };
+
     // 添加未保存更改的警告消息
     window.addEventListener('beforeunload', (e) => {
         if (!events.invoke('scene.dirty')) {
@@ -606,6 +674,35 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             }
         } catch (error) {
             console.error('GLB模型复制失败:', error);
+        }
+    });
+
+    // 高斯泼溅模型复制事件处理
+    events.on('splat.duplicate', (splat) => {
+        try {
+            console.log('开始复制高斯泼溅模型:', splat.name);
+
+            // 创建高斯泼溅模型的副本
+            const duplicatedSplat = duplicateSplatModel(splat, scene);
+
+            if (duplicatedSplat) {
+                // 先清空当前选择
+                events.fire('selection', null);
+
+                // 强制刷新场景
+                scene.forceRender = true;
+
+                // 延迟选中新模型，确保清空选择后再选中
+                setTimeout(() => {
+                    scene.forceRender = true;
+
+                    // 选中新复制的高斯泼溅模型
+                    events.fire('selection', duplicatedSplat);
+                    console.log('高斯泼溅模型复制完成，新模型名称:', duplicatedSplat.name);
+                }, 150);
+            }
+        } catch (error) {
+            console.error('高斯泼溅模型复制失败:', error);
         }
     });
 

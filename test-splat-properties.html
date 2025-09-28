@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>高斯泼溅模型属性弹窗测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        .feature-item {
+            margin: 10px 0;
+            padding: 10px;
+            border-left: 4px solid #007acc;
+            background-color: #f8f9fa;
+        }
+        .test-steps {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+        .expected-result {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>高斯泼溅模型属性弹窗功能测试指南</h1>
+    
+    <h2>功能概述</h2>
+    <p>本次更新为高斯泼溅模型添加了与GLB模型相同的属性弹窗功能，用户可以通过点击高斯泼溅模型查看其详细信息，包括GIS信息。</p>
+    
+    <h2>新增功能</h2>
+    <div class="feature-item">
+        <strong>✓ 右键菜单支持：</strong> 高斯泼溅模型现在支持右键菜单操作（原位复制、删除、隐藏/显示）
+    </div>
+    <div class="feature-item">
+        <strong>✓ 属性弹窗：</strong> 点击高斯泼溅模型时显示属性面板，包含基本信息、几何信息、变换信息和GIS信息
+    </div>
+    <div class="feature-item">
+        <strong>✓ GIS信息显示：</strong> 高斯泼溅模型属性面板中显示海拔高度、地理坐标和模型朝向等GIS信息
+    </div>
+    <div class="feature-item">
+        <strong>✓ 模型复制：</strong> 支持高斯泼溅模型的原位复制功能
+    </div>
+    
+    <h2>测试步骤</h2>
+    
+    <div class="test-steps">
+        <h3>测试1：属性弹窗显示</h3>
+        <ol>
+            <li>打开SuperSplat应用</li>
+            <li>加载一个高斯泼溅模型（.ply、.splat或.sog文件）</li>
+            <li>点击高斯泼溅模型</li>
+            <li>观察右侧是否出现属性面板</li>
+        </ol>
+    </div>
+    
+    <div class="expected-result">
+        <strong>预期结果：</strong>
+        <ul>
+            <li>属性面板出现在右侧</li>
+            <li>显示"名称: [模型名称]"</li>
+            <li>显示"类型: 高斯泼溅模型 (PLY/SPLAT)"</li>
+            <li>几何信息部分显示包围盒、总高斯点数、有效点数</li>
+            <li>变换信息部分显示位置、旋转、缩放</li>
+            <li>扩展信息部分显示海拔高度、地理坐标、模型朝向</li>
+        </ul>
+    </div>
+    
+    <div class="test-steps">
+        <h3>测试2：右键菜单功能</h3>
+        <ol>
+            <li>选中一个高斯泼溅模型</li>
+            <li>在模型上右键点击</li>
+            <li>观察是否出现右键菜单</li>
+            <li>测试各个菜单项功能：原位复制、删除模型、隐藏/显示模型</li>
+        </ol>
+    </div>
+    
+    <div class="expected-result">
+        <strong>预期结果：</strong>
+        <ul>
+            <li>右键菜单正常出现</li>
+            <li>原位复制：创建一个同名的"_复制"版本模型</li>
+            <li>删除模型：显示确认对话框，确认后删除模型</li>
+            <li>隐藏模型：模型变为不可见</li>
+            <li>显示模型：隐藏的模型重新显示</li>
+        </ul>
+    </div>
+    
+    <div class="test-steps">
+        <h3>测试3：与GLB模型功能对比</h3>
+        <ol>
+            <li>同时加载GLB模型和高斯泼溅模型</li>
+            <li>分别点击两种模型</li>
+            <li>比较属性面板的显示内容</li>
+            <li>测试两种模型的右键菜单功能</li>
+        </ol>
+    </div>
+    
+    <div class="expected-result">
+        <strong>预期结果：</strong>
+        <ul>
+            <li>GLB模型显示"类型: GLB/glTF 模型"，扩展信息显示无人机飞控信息</li>
+            <li>高斯泼溅模型显示"类型: 高斯泼溅模型 (PLY/SPLAT)"，扩展信息显示GIS信息</li>
+            <li>两种模型的右键菜单功能都正常工作</li>
+            <li>属性面板可以在两种模型之间正确切换显示</li>
+        </ul>
+    </div>
+    
+    <h2>代码更改总结</h2>
+    <ul>
+        <li><strong>context-menu.ts</strong>: 添加了对高斯泼溅模型的右键菜单支持</li>
+        <li><strong>properties-panel.ts</strong>: 添加了高斯泼溅模型的属性显示功能</li>
+        <li><strong>editor.ts</strong>: 添加了高斯泼溅模型的复制事件处理</li>
+    </ul>
+    
+    <h2>注意事项</h2>
+    <ul>
+        <li>GIS信息目前使用世界坐标作为示例，实际应用中应从模型元数据中获取真实地理坐标</li>
+        <li>高斯泼溅模型的复制功能会创建新的Splat实例并复制所有属性</li>
+        <li>属性面板会根据选中的模型类型自动调整显示内容</li>
+    </ul>
+    
+    <p><em>测试完成后，确保所有功能都按预期工作，如有问题请检查浏览器控制台的错误信息。</em></p>
+</body>
+</html>

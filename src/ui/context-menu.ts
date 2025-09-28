@@ -3,6 +3,7 @@ import { Container, Element } from '@playcanvas/pcui';
 import { ElementType } from '../element';
 import { Events } from '../events';
 import { GltfModel } from '../gltf-model';
+import { Splat } from '../splat';
 import { localize } from './localization';
 // 导入SVG图标
 import deleteSvg from './svg/delete.svg';
@@ -27,6 +28,7 @@ class ContextMenu extends Container {
     private events: Events;
     private isVisible: boolean = false;
     private currentModel: GltfModel | null = null;
+    private currentSplat: Splat | null = null;
     private menuItems: ContextMenuItem[] = [];
     private mouseDownPos: { x: number, y: number } | null = null;
     private isDragging: boolean = false;
@@ -52,25 +54,27 @@ class ContextMenu extends Container {
                 text: '原位复制',
                 icon: selectDuplicateSvg,
                 action: () => this.duplicateInPlace(),
-                enabled: () => this.currentModel !== null
+                enabled: () => this.currentModel !== null || this.currentSplat !== null
             },
             {
                 text: '删除模型',
                 icon: deleteSvg,
                 action: () => this.deleteModel(),
-                enabled: () => this.currentModel !== null
+                enabled: () => this.currentModel !== null || this.currentSplat !== null
             },
             {
                 text: '隐藏模型',
                 icon: hiddenSvg,
                 action: () => this.hideModel(),
-                enabled: () => this.currentModel !== null && this.currentModel.entity?.enabled
+                enabled: () => (this.currentModel !== null && this.currentModel.entity?.enabled) ||
+                              (this.currentSplat !== null && this.currentSplat.visible)
             },
             {
                 text: '显示模型',
                 icon: shownSvg,
                 action: () => this.showModel(),
-                enabled: () => this.currentModel !== null && !this.currentModel.entity?.enabled
+                enabled: () => (this.currentModel !== null && !this.currentModel.entity?.enabled) ||
+                              (this.currentSplat !== null && !this.currentSplat.visible)
             }
         ];
     }
@@ -157,10 +161,16 @@ class ContextMenu extends Container {
                     return;
                 }
 
-                // 获取当前选中的模型
+                // 获取当前选中的模型或高斯泼溅
                 const selection = this.events.invoke('selection');
-                if (selection && selection.type === ElementType.model) {
-                    this.currentModel = selection as GltfModel;
+                if (selection && (selection.type === ElementType.model || selection.type === ElementType.splat)) {
+                    if (selection.type === ElementType.model) {
+                        this.currentModel = selection as GltfModel;
+                        this.currentSplat = null;
+                    } else {
+                        this.currentSplat = selection as Splat;
+                        this.currentModel = null;
+                    }
                     this.show(e.clientX, e.clientY);
                 } else {
                     this.hide();
@@ -188,13 +198,20 @@ class ContextMenu extends Container {
             }
         });
 
-        // 监听选择变化，如果没有选中模型则隐藏菜单
+        // 监听选择变化，如果没有选中模型或高斯泼溅则隐藏菜单
         this.events.on('selection.changed', (element: any) => {
-            if (!element || element.type !== ElementType.model) {
+            if (!element || (element.type !== ElementType.model && element.type !== ElementType.splat)) {
                 this.currentModel = null;
+                this.currentSplat = null;
                 this.hide();
             } else {
-                this.currentModel = element as GltfModel;
+                if (element.type === ElementType.model) {
+                    this.currentModel = element as GltfModel;
+                    this.currentSplat = null;
+                } else {
+                    this.currentSplat = element as Splat;
+                    this.currentModel = null;
+                }
             }
         });
     }
@@ -242,16 +259,16 @@ class ContextMenu extends Container {
     }
 
     private duplicateInPlace() {
-        if (!this.currentModel) return;
-
         try {
-            console.log('开始原位复制GLB模型:', this.currentModel.filename);
-
-            // 触发复制事件并等待完成
-            this.duplicateGltfModel(this.currentModel);
-
-            console.log('原位复制请求已发送');
-
+            if (this.currentModel) {
+                console.log('开始原位复制GLB模型:', this.currentModel.filename);
+                this.duplicateGltfModel(this.currentModel);
+                console.log('GLB模型原位复制请求已发送');
+            } else if (this.currentSplat) {
+                console.log('开始原位复制高斯泼溅模型:', this.currentSplat.name);
+                this.duplicateSplatModel(this.currentSplat);
+                console.log('高斯泼溅模型原位复制请求已发送');
+            }
         } catch (error) {
             console.error('原位复制失败:', error);
         }
@@ -271,24 +288,52 @@ class ContextMenu extends Container {
         }
     }
 
-    private async deleteModel() {
-        if (!this.currentModel) return;
-
+    private duplicateSplatModel(splat: Splat) {
+        // 触发高斯泼溅模型复制事件
         try {
+            console.log('触发高斯泼溅模型复制事件:', splat.name);
+
+            // 触发复制事件，编辑器会处理具体的复制逻辑
+            this.events.fire('splat.duplicate', splat);
+
+        } catch (error) {
+            console.error('复制高斯泼溅模型失败:', error);
+            throw error;
+        }
+    }
+
+    private async deleteModel() {
+        try {
+            let elementName = '';
+            let elementType = '';
+            
+            if (this.currentModel) {
+                elementName = this.currentModel.filename;
+                elementType = 'GLB模型';
+            } else if (this.currentSplat) {
+                elementName = this.currentSplat.name;
+                elementType = '高斯泼溅模型';
+            } else {
+                return;
+            }
+
             // 显示确认对话框
             const result = await this.events.invoke('showPopup', {
                 type: 'yesno',
-                header: 'Remove Model',
-                message: `Are you sure you want to remove '${this.currentModel.filename}' from the scene? This operation can not be undone.`
+                header: '删除模型',
+                message: `确定要从场景中删除 '${elementName}' 吗？此操作无法撤销。`
             });
 
             if (result?.action === 'yes') {
-                // 使用正确的删除方法
-                this.currentModel.destroy();
-                console.log('模型删除成功:', this.currentModel.filename);
-
-                // 清除当前模型引用
-                this.currentModel = null;
+                if (this.currentModel) {
+                    this.currentModel.destroy();
+                    console.log('GLB模型删除成功:', elementName);
+                    this.currentModel = null;
+                } else if (this.currentSplat) {
+                    this.currentSplat.destroy();
+                    console.log('高斯泼溅模型删除成功:', elementName);
+                    this.currentSplat = null;
+                }
 
                 // 隐藏菜单
                 this.hide();
@@ -299,24 +344,32 @@ class ContextMenu extends Container {
     }
 
     private hideModel() {
-        if (!this.currentModel || !this.currentModel.entity) return;
-
         try {
-            this.currentModel.entity.enabled = false;
-            this.events.fire('model.visibility', this.currentModel);
-            console.log('模型已隐藏');
+            if (this.currentModel && this.currentModel.entity) {
+                this.currentModel.entity.enabled = false;
+                this.events.fire('model.visibility', this.currentModel);
+                console.log('GLB模型已隐藏');
+            } else if (this.currentSplat) {
+                this.currentSplat.visible = false;
+                this.events.fire('splat.visibility', this.currentSplat);
+                console.log('高斯泼溅模型已隐藏');
+            }
         } catch (error) {
             console.error('隐藏模型失败:', error);
         }
     }
 
     private showModel() {
-        if (!this.currentModel || !this.currentModel.entity) return;
-
         try {
-            this.currentModel.entity.enabled = true;
-            this.events.fire('model.visibility', this.currentModel);
-            console.log('模型已显示');
+            if (this.currentModel && this.currentModel.entity) {
+                this.currentModel.entity.enabled = true;
+                this.events.fire('model.visibility', this.currentModel);
+                console.log('GLB模型已显示');
+            } else if (this.currentSplat) {
+                this.currentSplat.visible = true;
+                this.events.fire('splat.visibility', this.currentSplat);
+                console.log('高斯泼溅模型已显示');
+            }
         } catch (error) {
             console.error('显示模型失败:', error);
         }

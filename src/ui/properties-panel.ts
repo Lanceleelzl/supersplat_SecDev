@@ -4,6 +4,7 @@ import { Vec3 } from 'playcanvas';
 import { ElementType } from '../element';
 import { Events } from '../events';
 import { GltfModel } from '../gltf-model';
+import { Splat } from '../splat';
 import { localize } from './localization';
 import closeSvg from './svg/close.svg';
 import { Tooltips } from './tooltips';
@@ -18,6 +19,7 @@ class PropertiesPanel extends Container {
     events: Events;
     tooltips: Tooltips;
     currentModel: GltfModel | null = null;
+    currentSplat: Splat | null = null;
 
     // 信息显示容器
     infoContainer: Container;
@@ -202,9 +204,9 @@ class PropertiesPanel extends Container {
         this.transformContainer.append(this.rotationLabel);
         this.transformContainer.append(this.scaleLabel);
 
-        // 无人机飞控信息section
+        // 扩展信息section (GLB模型显示无人机飞控信息，高斯泼溅显示GIS信息)
         this.droneInfoHeader = new Label({
-            text: '▼ 无人机飞控-云台',
+            text: '▼ 扩展信息',
             class: 'collapsible-header'
         });
 
@@ -256,13 +258,13 @@ class PropertiesPanel extends Container {
 
         this.infoContainer.append(new Container({ class: 'properties-spacer' }));
 
-        // 无人机飞控信息部分
+        // 扩展信息部分 (GLB模型：无人机飞控信息，高斯泼溅：GIS信息)
         this.infoContainer.append(this.droneInfoHeader);
         this.infoContainer.append(this.droneInfoContainer);
 
         // 占位符，当没有选中模型时显示
         this.placeholder = new Label({
-            text: '选择一个GLB模型以查看属性',
+            text: '选择一个GLB模型或高斯泼溅模型以查看属性',
             class: 'properties-placeholder'
         });
 
@@ -280,20 +282,38 @@ class PropertiesPanel extends Container {
         this.events.on('selection.changed', (element: any) => {
             if (element && element.type === ElementType.model) {
                 const model = element as GltfModel;
+                this.currentModel = model;
+                this.currentSplat = null;
                 this.showPanel();
                 this.showModelProperties(model);
+            } else if (element && element.type === ElementType.splat) {
+                const splat = element as Splat;
+                this.currentSplat = splat;
+                this.currentModel = null;
+                this.showPanel();
+                this.showSplatProperties(splat);
             } else {
                 this.hideProperties();
             }
         });
 
-        // 监听相机焦点拾取事件（这个事件在每次点击时都会触发，包括点击同一个模型）
+        // 监听相机焦点拾取事件（这个事件在每次点击时都会触发，包括点击同一个模型或高斯泼溅）
         this.events.on('camera.focalPointPicked', (details: { splat?: any, model?: GltfModel }) => {
             if (details.model && details.model.type === ElementType.model) {
                 // 如果面板隐藏了，重新显示
                 if (this.hidden) {
+                    this.currentModel = details.model;
+                    this.currentSplat = null;
                     this.showPanel();
                     this.showModelProperties(details.model);
+                }
+            } else if (details.splat && details.splat.type === ElementType.splat) {
+                // 如果面板隐藏了，重新显示
+                if (this.hidden) {
+                    this.currentSplat = details.splat;
+                    this.currentModel = null;
+                    this.showPanel();
+                    this.showSplatProperties(details.splat);
                 }
             }
         });
@@ -320,13 +340,23 @@ class PropertiesPanel extends Container {
 
     private showModelProperties(model: GltfModel) {
         this.currentModel = model;
+        this.currentSplat = null;
         this.placeholder.hidden = true;
         this.infoContainer.hidden = false;
         this.updateModelInfo();
     }
 
+    private showSplatProperties(splat: Splat) {
+        this.currentSplat = splat;
+        this.currentModel = null;
+        this.placeholder.hidden = true;
+        this.infoContainer.hidden = false;
+        this.updateSplatInfo();
+    }
+
     private hideProperties() {
         this.currentModel = null;
+        this.currentSplat = null;
         this.placeholder.hidden = false;
         this.infoContainer.hidden = true;
         this.clearLabels();
@@ -362,6 +392,40 @@ class PropertiesPanel extends Container {
         } catch (error) {
             // 如果访问模型数据时出现错误，说明模型可能已被删除
             console.warn('属性面板更新时出错，可能模型已被删除:', error);
+            this.hideProperties();
+        }
+    }
+
+    private updateSplatInfo() {
+        if (!this.currentSplat) {
+            this.clearLabels();
+            return;
+        }
+
+        const splat = this.currentSplat;
+
+        // 检查高斯泼溅模型是否仍然有效
+        if (!splat.entity || !splat.visible) {
+            // 如果模型被隐藏，仍然显示属性，但标注状态
+            // this.hideProperties();
+            // return;
+        }
+
+        try {
+            // 基本信息
+            this.nameLabel.text = `名称: ${splat.name || splat.filename || '未知'}`;
+            this.typeLabel.text = '类型: 高斯泼溅模型 (PLY/SPLAT)';
+
+            // 几何信息 - 高斯泼溅特有信息
+            this.updateSplatGeometryInfo(splat);
+
+            // 变换信息
+            this.updateSplatTransformInfo(splat);
+
+            // GIS信息 - 高斯泼溅的坐标和空间信息
+            this.calculateSplatGISInfo(splat);
+        } catch (error) {
+            console.warn('高斯泼溅属性面板更新时出错:', error);
             this.hideProperties();
         }
     }
@@ -576,7 +640,7 @@ class PropertiesPanel extends Container {
             this.toggleTransform();
         });
 
-        // 无人机飞控信息点击事件
+        // 扩展信息点击事件
         this.droneInfoHeader.dom.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -605,7 +669,7 @@ class PropertiesPanel extends Container {
     private toggleDroneInfo() {
         this.droneInfoCollapsed = !this.droneInfoCollapsed;
         this.droneInfoContainer.hidden = this.droneInfoCollapsed;
-        this.droneInfoHeader.text = this.droneInfoCollapsed ? '▶ 无人机飞控-云台' : '▼ 无人机飞控-云台';
+        this.droneInfoHeader.text = this.droneInfoCollapsed ? '▶ 扩展信息' : '▼ 扩展信息';
     }
 
     // 计算无人机飞控参数
@@ -669,6 +733,95 @@ class PropertiesPanel extends Container {
         this.droneAltitudeLabel.text = '高度(Altitude): -';
         this.cameraGimbalPitchLabel.text = '云台俯仰: -';
         this.cameraGimbalYawLabel.text = '云台方向: -';
+    }
+
+    // 高斯泼溅模型几何信息更新
+    private updateSplatGeometryInfo(splat: Splat) {
+        try {
+            // 包围盒信息
+            const bound = splat.worldBound;
+            if (bound) {
+                const size = new Vec3().copy(bound.halfExtents).mulScalar(2);
+                this.boundingBoxLabel.text = `包围盒: ${size.x.toFixed(2)} × ${size.y.toFixed(2)} × ${size.z.toFixed(2)}`;
+            } else {
+                this.boundingBoxLabel.text = '包围盒: 无法计算';
+            }
+
+            // 高斯泼溅特有信息
+            this.verticesLabel.text = `总高斯点数: ${splat.numSplats.toLocaleString()}`;
+            this.facesLabel.text = `有效点数: ${(splat.numSplats - splat.numDeleted).toLocaleString()}`;
+        } catch (error) {
+            this.boundingBoxLabel.text = '包围盒: 计算错误';
+            this.verticesLabel.text = '总高斯点数: 计算错误';
+            this.facesLabel.text = '有效点数: 计算错误';
+        }
+    }
+
+    // 高斯泼溅模型变换信息更新
+    private updateSplatTransformInfo(splat: Splat) {
+        if (!splat.entity) {
+            this.positionLabel.text = '位置: -';
+            this.rotationLabel.text = '旋转: -';
+            this.scaleLabel.text = '缩放: -';
+            return;
+        }
+
+        try {
+            const entity = splat.entity;
+            const pos = entity.getPosition();
+            const rot = entity.getRotation();
+            const scale = entity.getLocalScale();
+
+            // 位置信息
+            this.positionLabel.text = `位置: (${pos.x.toFixed(3)}, ${pos.y.toFixed(3)}, ${pos.z.toFixed(3)})`;
+
+            // 旋转信息 (转换为欧拉角显示)
+            const euler = rot.getEulerAngles();
+            this.rotationLabel.text = `旋转: (${euler.x.toFixed(1)}°, ${euler.y.toFixed(1)}°, ${euler.z.toFixed(1)}°)`;
+
+            // 缩放信息
+            this.scaleLabel.text = `缩放: (${scale.x.toFixed(3)}, ${scale.y.toFixed(3)}, ${scale.z.toFixed(3)})`;
+        } catch (error) {
+            this.positionLabel.text = '位置: 获取失败';
+            this.rotationLabel.text = '旋转: 获取失败';
+            this.scaleLabel.text = '缩放: 获取失败';
+        }
+    }
+
+    // 计算高斯泼溅模型的GIS信息
+    private calculateSplatGISInfo(splat: Splat) {
+        if (!splat.entity) {
+            this.clearDroneLabels();
+            return;
+        }
+
+        try {
+            const entity = splat.entity;
+            const pos = entity.getPosition();
+            const rot = entity.getRotation();
+
+            // 获取中心点位置作为GIS坐标参考
+            const centerPoint = splat.worldBound?.center || pos;
+
+            // 模拟GIS坐标信息 (实际应用中应从模型元数据或配置中获取)
+            // 这里使用世界坐标作为示例
+            const longitude = centerPoint.x; // 经度 (应转换为真实地理坐标)
+            const latitude = centerPoint.z;  // 纬度 (应转换为真实地理坐标)
+            const altitude = centerPoint.y;  // 高度
+
+            // 获取模型朝向信息
+            const euler = rot.getEulerAngles();
+            const heading = this.normalizeAngle(-euler.y); // 航向角
+
+            // 更新显示标签 (复用无人机信息标签)
+            this.droneAltitudeLabel.text = `海拔高度: ${altitude.toFixed(3)}m`;
+            this.cameraGimbalPitchLabel.text = `地理坐标: (${longitude.toFixed(6)}, ${latitude.toFixed(6)})`;
+            this.cameraGimbalYawLabel.text = `模型朝向: ${heading.toFixed(1)}°`;
+
+        } catch (error) {
+            console.warn('计算高斯泼溅GIS信息时出错:', error);
+            this.clearDroneLabels();
+        }
     }
 }
 
