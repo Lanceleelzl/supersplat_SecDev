@@ -4,6 +4,61 @@
     min-height: 80px;
     padding: 4px 0px;
 
+    .category-container {
+        margin-bottom: 8px;
+
+        .category-header {
+            display: flex;
+            align-items: center;
+            padding: 4px 8px;
+            background-color: $bcg-light;
+            border-radius: 4px;
+            cursor: pointer;
+            user-select: none;
+            margin-bottom: 4px;
+            transition: background-color 0.2s ease;
+
+            &:hover {
+                background-color: $bcg-lighter;
+            }
+        }
+
+        .category-collapse-icon {
+            width: 16px;
+            height: 16px;
+            margin-right: 8px;
+            transition: transform 0.2s ease;
+            color: $text-secondary;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            svg {
+                width: 12px;
+                height: 12px;
+                fill: currentColor;
+            }
+        }
+
+        .category-label {
+            font-weight: 600;
+            font-size: 12px;
+            color: $text-primary;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .category-content {
+            padding-left: 12px;
+            border-left: 2px solid $bcg-light;
+            margin-left: 8px;
+        }
+
+        &.collapsed .category-content {
+            display: none;
+        }
+    }
+
     .splat-item {
         display: flex;
         flex-direction: row;
@@ -53,6 +108,24 @@
             .visible & {
                 color: $text-secondary;
             }
+
+            &:hover {
+                color: $text-primary;
+            }
+        }
+
+        .splat-item-duplicate {
+            flex-grow: 0;
+            flex-shrink: 0;
+
+            padding: 4px;
+            width: 16px;
+            height: 16px;
+            line-height: 16px;
+
+            color: $text-secondary;
+
+            cursor: pointer;
 
             &:hover {
                 color: $text-primary;
