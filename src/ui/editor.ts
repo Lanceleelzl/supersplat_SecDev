@@ -5,6 +5,7 @@ import { DataPanel } from './data-panel';
 import { Events } from '../events';
 import { BottomToolbar } from './bottom-toolbar';
 import { ColorPanel } from './color-panel';
+import { ContextMenu } from './context-menu';
 import { ExportPopup } from './export-popup';
 import { ImageSettingsDialog } from './image-settings-dialog';
 import { localize, localizeInit } from './localization';
@@ -145,6 +146,9 @@ class EditorUI {
         // properties panel - 属性面板，与场景面板同级显示在视口范围内
         const propertiesPanel = new PropertiesPanel(events, tooltips);
         canvasContainer.append(propertiesPanel);
+
+        // context menu - 右键上下文菜单
+        const contextMenu = new ContextMenu(events);
 
         // main container
         const mainContainer = new Container({

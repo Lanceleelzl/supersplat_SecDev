@@ -1,0 +1,39 @@
+// 上下文菜单样式
+.context-menu {
+    position: fixed;
+    background-color: var(--panel-bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 10000;
+    min-width: 150px;
+    padding: 4px 0;
+    font-family: var(--font-family);
+
+    .context-menu-item {
+        padding: 8px 16px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        font-size: 13px;
+        color: var(--text-primary-color);
+        user-select: none;
+        transition: background-color 0.1s ease;
+
+        &:hover:not(.disabled) {
+            background-color: var(--item-hover-color);
+        }
+
+        &.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        span {
+            &:first-child {
+                margin-right: 8px;
+                font-size: 14px;
+            }
+        }
+    }
+}

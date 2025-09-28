@@ -10,11 +10,13 @@ class GltfModel extends Element {
     asset: Asset;
     private _cachedWorldBound: BoundingBox | null = null;
     private _cachedWorldBoundFrame = -1;
+    private _customFilename: string | null = null;  // 添加自定义文件名属性
 
-    constructor(asset: Asset, entity: Entity) {
+    constructor(asset: Asset, entity: Entity, customFilename?: string) {
         super(ElementType.model);
         this.asset = asset;
         this.entity = entity;
+        this._customFilename = customFilename || null;
 
         // Ensure the model is visible by default
         this.visible = true;
@@ -26,7 +28,12 @@ class GltfModel extends Element {
     }
 
     get filename() {
-        return this.asset.name;
+        return this._customFilename || this.asset.name;
+    }
+
+    // 设置自定义文件名的方法
+    setCustomFilename(filename: string) {
+        this._customFilename = filename;
     }
 
     // Setup physics collision detection for ray picking
@@ -60,8 +67,18 @@ class GltfModel extends Element {
     }
 
     add() {
-        // Entity is already added to the scene root in asset-loader
+        // Entity is already added to the scene root in asset-loader or manually in duplication
         // This method is called when the element is added to the scene
+        
+        // 确保实体在场景根节点中（对于复制的模型很重要）
+        if (this.entity && this.scene && this.scene.app && this.scene.app.root) {
+            if (this.entity.parent !== this.scene.app.root) {
+                this.scene.app.root.addChild(this.entity);
+            }
+        }
+        
+        // 添加碰撞器以支持选择和交互
+        this.setupPhysicsPicking();
     }
 
     remove() {
