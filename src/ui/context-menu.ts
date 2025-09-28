@@ -4,6 +4,17 @@ import { ElementType } from '../element';
 import { Events } from '../events';
 import { GltfModel } from '../gltf-model';
 import { localize } from './localization';
+// 导入SVG图标
+import deleteSvg from './svg/delete.svg';
+import hiddenSvg from './svg/hidden.svg';
+import selectDuplicateSvg from './svg/select-duplicate.svg';
+import shownSvg from './svg/shown.svg';
+
+// 创建SVG元素的帮助函数
+const createSvg = (svgString: string) => {
+    const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
+    return new DOMParser().parseFromString(decodedStr, 'image/svg+xml').documentElement;
+};
 
 interface ContextMenuItem {
     text: string;
@@ -17,6 +28,8 @@ class ContextMenu extends Container {
     private isVisible: boolean = false;
     private currentModel: GltfModel | null = null;
     private menuItems: ContextMenuItem[] = [];
+    private mouseDownPos: { x: number, y: number } | null = null;
+    private isDragging: boolean = false;
 
     constructor(events: Events) {
         super({
@@ -37,25 +50,25 @@ class ContextMenu extends Container {
         this.menuItems = [
             {
                 text: '原位复制',
-                icon: '📋',
+                icon: selectDuplicateSvg,
                 action: () => this.duplicateInPlace(),
                 enabled: () => this.currentModel !== null
             },
             {
                 text: '删除模型',
-                icon: '🗑️',
+                icon: deleteSvg,
                 action: () => this.deleteModel(),
                 enabled: () => this.currentModel !== null
             },
             {
                 text: '隐藏模型',
-                icon: '👁️',
+                icon: hiddenSvg,
                 action: () => this.hideModel(),
                 enabled: () => this.currentModel !== null && this.currentModel.entity?.enabled
             },
             {
                 text: '显示模型',
-                icon: '👁️‍🗨️',
+                icon: shownSvg,
                 action: () => this.showModel(),
                 enabled: () => this.currentModel !== null && !this.currentModel.entity?.enabled
             }
@@ -63,49 +76,36 @@ class ContextMenu extends Container {
     }
 
     private createMenuDOM() {
+        // 样式由CSS控制，只设置必要的定位相关样式
         this.dom.style.position = 'fixed';
-        this.dom.style.backgroundColor = '#2a2a2a';
-        this.dom.style.border = '1px solid #555';
-        this.dom.style.borderRadius = '4px';
-        this.dom.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.3)';
-        this.dom.style.zIndex = '10000';
-        this.dom.style.minWidth = '150px';
-        this.dom.style.padding = '4px 0';
 
         this.menuItems.forEach((item, index) => {
             const menuItem = new Element({
                 class: 'context-menu-item'
             });
 
-            menuItem.dom.style.padding = '8px 16px';
-            menuItem.dom.style.cursor = 'pointer';
-            menuItem.dom.style.display = 'flex';
-            menuItem.dom.style.alignItems = 'center';
-            menuItem.dom.style.fontSize = '13px';
-            menuItem.dom.style.color = '#ffffff';
-            menuItem.dom.style.userSelect = 'none';
+            // 样式由CSS控制
+            const iconContainer = document.createElement('span');
+            iconContainer.style.display = 'flex';
+            iconContainer.style.alignItems = 'center';
+            iconContainer.style.width = '16px';
+            iconContainer.style.height = '16px';
 
-            const icon = document.createElement('span');
-            icon.textContent = item.icon || '';
-            icon.style.marginRight = '8px';
-            icon.style.fontSize = '14px';
+            if (item.icon) {
+                const svgElement = createSvg(item.icon);
+                svgElement.style.width = '16px';
+                svgElement.style.height = '16px';
+                svgElement.style.fill = 'currentColor';
+                iconContainer.appendChild(svgElement);
+            }
 
             const text = document.createElement('span');
             text.textContent = item.text;
 
-            menuItem.dom.appendChild(icon);
+            menuItem.dom.appendChild(iconContainer);
             menuItem.dom.appendChild(text);
 
-            // 鼠标悬停效果
-            menuItem.dom.addEventListener('mouseenter', () => {
-                if (item.enabled ? item.enabled() : true) {
-                    menuItem.dom.style.backgroundColor = '#4a4a4a';
-                }
-            });
-
-            menuItem.dom.addEventListener('mouseleave', () => {
-                menuItem.dom.style.backgroundColor = 'transparent';
-            });
+            // 鼠标悬停效果由CSS控制，这里不需要JavaScript处理
 
             // 点击事件
             menuItem.dom.addEventListener('click', (e) => {
@@ -123,12 +123,39 @@ class ContextMenu extends Container {
     }
 
     private bindEvents() {
+        // 监听鼠标按下事件，记录位置
+        document.addEventListener('mousedown', (e) => {
+            if (e.button === 2) { // 右键按下
+                this.mouseDownPos = { x: e.clientX, y: e.clientY };
+                this.isDragging = false;
+            }
+        });
+
+        // 监听鼠标移动事件，检测拖拽
+        document.addEventListener('mousemove', (e) => {
+            if (this.mouseDownPos && e.buttons === 2) { // 右键拖拽中
+                const deltaX = Math.abs(e.clientX - this.mouseDownPos.x);
+                const deltaY = Math.abs(e.clientY - this.mouseDownPos.y);
+                // 如果移动距离超过5像素，认为是拖拽
+                if (deltaX > 5 || deltaY > 5) {
+                    this.isDragging = true;
+                }
+            }
+        });
+
         // 监听鼠标右键事件
         document.addEventListener('contextmenu', (e) => {
             // 检查是否在画布区域右键
             const canvas = document.querySelector('canvas');
             if (canvas && canvas.contains(e.target as Node)) {
                 e.preventDefault();
+
+                // 如果刚刚进行了拖拽，不显示菜单
+                if (this.isDragging) {
+                    this.isDragging = false;
+                    this.mouseDownPos = null;
+                    return;
+                }
 
                 // 获取当前选中的模型
                 const selection = this.events.invoke('selection');
@@ -141,6 +168,10 @@ class ContextMenu extends Container {
             } else {
                 this.hide();
             }
+
+            // 重置拖拽状态
+            this.isDragging = false;
+            this.mouseDownPos = null;
         });
 
         // 点击其他地方隐藏菜单
@@ -204,12 +235,8 @@ class ContextMenu extends Container {
 
             if (isEnabled) {
                 item.classList.remove('disabled');
-                (item as HTMLElement).style.opacity = '1';
-                (item as HTMLElement).style.cursor = 'pointer';
             } else {
                 item.classList.add('disabled');
-                (item as HTMLElement).style.opacity = '0.5';
-                (item as HTMLElement).style.cursor = 'not-allowed';
             }
         });
     }
@@ -244,15 +271,27 @@ class ContextMenu extends Container {
         }
     }
 
-    private deleteModel() {
+    private async deleteModel() {
         if (!this.currentModel) return;
 
         try {
-            // 触发删除事件
-            const scene = this.events.invoke('scene');
-            if (scene) {
-                scene.remove(this.currentModel);
-                console.log('模型删除成功');
+            // 显示确认对话框
+            const result = await this.events.invoke('showPopup', {
+                type: 'yesno',
+                header: 'Remove Model',
+                message: `Are you sure you want to remove '${this.currentModel.filename}' from the scene? This operation can not be undone.`
+            });
+
+            if (result?.action === 'yes') {
+                // 使用正确的删除方法
+                this.currentModel.destroy();
+                console.log('模型删除成功:', this.currentModel.filename);
+                
+                // 清除当前模型引用
+                this.currentModel = null;
+                
+                // 隐藏菜单
+                this.hide();
             }
         } catch (error) {
             console.error('删除模型失败:', error);
