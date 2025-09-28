@@ -35,18 +35,31 @@ class PropertiesPanel extends Container {
     rotationLabel: Label;
     scaleLabel: Label;
 
+    // 无人机飞控信息标签
+    droneYawLabel: Label;
+    dronePitchLabel: Label;
+    droneRollLabel: Label;
+    droneAltitudeLabel: Label;
+    cameraGimbalPitchLabel: Label;
+    cameraGimbalYawLabel: Label;
+    headingLabel: Label;
+    compassLabel: Label;
+
     // 可折叠容器和标题
     basicInfoHeader: Label;
     geometryHeader: Label;
     transformHeader: Label;
+    droneInfoHeader: Label;
     basicInfoContainer: Container;
     geometryContainer: Container;
     transformContainer: Container;
+    droneInfoContainer: Container;
 
     // 折叠状态
     private basicInfoCollapsed: boolean = false;
     private geometryCollapsed: boolean = false;
     private transformCollapsed: boolean = false;
+    private droneInfoCollapsed: boolean = false;
 
     constructor(events: Events, tooltips: Tooltips, args = {}) {
         args = {
@@ -194,6 +207,69 @@ class PropertiesPanel extends Container {
         this.transformContainer.append(this.rotationLabel);
         this.transformContainer.append(this.scaleLabel);
 
+        // 无人机飞控信息section
+        this.droneInfoHeader = new Label({
+            text: '▼ 无人机飞控',
+            class: 'collapsible-header'
+        });
+
+        this.droneInfoContainer = new Container({
+            class: 'collapsible-content'
+        });
+
+        // 无人机姿态信息
+        this.droneYawLabel = new Label({
+            text: '偏航角(Yaw): -',
+            class: 'properties-info-label'
+        });
+
+        this.dronePitchLabel = new Label({
+            text: '俯仰角(Pitch): -',
+            class: 'properties-info-label'
+        });
+
+        this.droneRollLabel = new Label({
+            text: '横滚角(Roll): -',
+            class: 'properties-info-label'
+        });
+
+        this.droneAltitudeLabel = new Label({
+            text: '高度(Altitude): -',
+            class: 'properties-info-label'
+        });
+
+        // 相机云台信息
+        this.cameraGimbalPitchLabel = new Label({
+            text: '云台俯仰: -',
+            class: 'properties-info-label'
+        });
+
+        this.cameraGimbalYawLabel = new Label({
+            text: '云台偏航: -',
+            class: 'properties-info-label'
+        });
+
+        // 导航信息
+        this.headingLabel = new Label({
+            text: '航向角: -',
+            class: 'properties-info-label'
+        });
+
+        this.compassLabel = new Label({
+            text: '罗盘方向: -',
+            class: 'properties-info-label'
+        });
+
+        // 将无人机信息标签添加到容器
+        this.droneInfoContainer.append(this.droneYawLabel);
+        this.droneInfoContainer.append(this.dronePitchLabel);
+        this.droneInfoContainer.append(this.droneRollLabel);
+        this.droneInfoContainer.append(this.droneAltitudeLabel);
+        this.droneInfoContainer.append(this.cameraGimbalPitchLabel);
+        this.droneInfoContainer.append(this.cameraGimbalYawLabel);
+        this.droneInfoContainer.append(this.headingLabel);
+        this.droneInfoContainer.append(this.compassLabel);
+
         // 添加点击事件处理
         this.addCollapsibleEvents();
 
@@ -213,6 +289,12 @@ class PropertiesPanel extends Container {
         // 变换信息部分
         this.infoContainer.append(this.transformHeader);
         this.infoContainer.append(this.transformContainer);
+
+        this.infoContainer.append(new Container({ class: 'properties-spacer' }));
+
+        // 无人机飞控信息部分
+        this.infoContainer.append(this.droneInfoHeader);
+        this.infoContainer.append(this.droneInfoContainer);
 
         // 占位符，当没有选中模型时显示
         this.placeholder = new Label({
@@ -310,6 +392,9 @@ class PropertiesPanel extends Container {
 
             // 变换信息
             this.updateTransformInfo(model);
+
+            // 无人机飞控信息
+            this.calculateDroneFlightParameters(model);
         } catch (error) {
             // 如果访问模型数据时出现错误，说明模型可能已被删除
             console.warn('属性面板更新时出错，可能模型已被删除:', error);
@@ -421,6 +506,8 @@ class PropertiesPanel extends Container {
         this.positionLabel.text = '位置: -';
         this.rotationLabel.text = '旋转: -';
         this.scaleLabel.text = '缩放: -';
+        // 清空无人机飞控标签
+        this.clearDroneLabels();
     }
 
     private addDragFunctionality() {
@@ -524,6 +611,13 @@ class PropertiesPanel extends Container {
             e.stopPropagation();
             this.toggleTransform();
         });
+
+        // 无人机飞控信息点击事件
+        this.droneInfoHeader.dom.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.toggleDroneInfo();
+        });
     }
 
     private toggleBasicInfo() {
@@ -542,6 +636,110 @@ class PropertiesPanel extends Container {
         this.transformCollapsed = !this.transformCollapsed;
         this.transformContainer.hidden = this.transformCollapsed;
         this.transformHeader.text = this.transformCollapsed ? '▶ 变换信息' : '▼ 变换信息';
+    }
+
+    private toggleDroneInfo() {
+        this.droneInfoCollapsed = !this.droneInfoCollapsed;
+        this.droneInfoContainer.hidden = this.droneInfoCollapsed;
+        this.droneInfoHeader.text = this.droneInfoCollapsed ? '▶ 无人机飞控' : '▼ 无人机飞控';
+    }
+
+    // 计算无人机飞控参数
+    private calculateDroneFlightParameters(model: GltfModel) {
+        if (!model.entity || !model.entity.enabled) {
+            this.clearDroneLabels();
+            return;
+        }
+
+        try {
+            const entity = model.entity;
+            const pos = entity.getPosition();
+            const rot = entity.getRotation();
+
+            // 获取欧拉角 (以度为单位)
+            const euler = rot.getEulerAngles();
+            
+            // 无人机飞控标准参数转换
+            // 注意：PlayCanvas使用左手坐标系，Y轴向上
+            
+            // 1. 偏航角(Yaw) - 绕Y轴旋转，0度为正北方向，顺时针为正
+            let yaw = -euler.y; // PlayCanvas Y轴旋转转换为标准偏航角
+            yaw = this.normalizeAngle(yaw);
+            
+            // 2. 俯仰角(Pitch) - 绕X轴旋转，向上为正
+            let pitch = -euler.x; // PlayCanvas X轴旋转转换为标准俯仰角
+            pitch = this.clampAngle(pitch, -90, 90);
+            
+            // 3. 横滚角(Roll) - 绕Z轴旋转，右倾为正
+            let roll = euler.z; // PlayCanvas Z轴旋转即为标准横滚角
+            roll = this.clampAngle(roll, -180, 180);
+            
+            // 4. 高度(Altitude) - Y坐标即为高度
+            const altitude = pos.y;
+            
+            // 5. 相机云台参数（假设相机朝向与模型一致）
+            // 云台俯仰角通常独立于机体俯仰角
+            const gimbalPitch = pitch; // 简化处理，实际应根据云台独立角度计算
+            const gimbalYaw = 0; // 相对于机体的云台偏航角，默认为0
+            
+            // 6. 航向角(Heading) - 与偏航角相同，但通常以0-360度表示
+            let heading = yaw;
+            if (heading < 0) heading += 360;
+            
+            // 7. 罗盘方向
+            const compassDirection = this.getCompassDirection(heading);
+
+            // 更新标签显示
+            this.droneYawLabel.text = `偏航角(Yaw): ${yaw.toFixed(1)}°`;
+            this.dronePitchLabel.text = `俯仰角(Pitch): ${pitch.toFixed(1)}°`;
+            this.droneRollLabel.text = `横滚角(Roll): ${roll.toFixed(1)}°`;
+            this.droneAltitudeLabel.text = `高度(Altitude): ${altitude.toFixed(3)}m`;
+            this.cameraGimbalPitchLabel.text = `云台俯仰: ${gimbalPitch.toFixed(1)}°`;
+            this.cameraGimbalYawLabel.text = `云台偏航: ${gimbalYaw.toFixed(1)}°`;
+            this.headingLabel.text = `航向角: ${heading.toFixed(1)}°`;
+            this.compassLabel.text = `罗盘方向: ${compassDirection}`;
+
+        } catch (error) {
+            console.warn('计算无人机飞控参数时出错:', error);
+            this.clearDroneLabels();
+        }
+    }
+
+    // 角度标准化到 -180 到 180 度
+    private normalizeAngle(angle: number): number {
+        while (angle > 180) angle -= 360;
+        while (angle < -180) angle += 360;
+        return angle;
+    }
+
+    // 角度限制在指定范围内
+    private clampAngle(angle: number, min: number, max: number): number {
+        return Math.max(min, Math.min(max, angle));
+    }
+
+    // 根据航向角获取罗盘方向
+    private getCompassDirection(heading: number): string {
+        const directions = [
+            'N', 'NNE', 'NE', 'ENE',
+            'E', 'ESE', 'SE', 'SSE',
+            'S', 'SSW', 'SW', 'WSW',
+            'W', 'WNW', 'NW', 'NNW'
+        ];
+        
+        const index = Math.round(heading / 22.5) % 16;
+        return directions[index];
+    }
+
+    // 清空无人机飞控标签
+    private clearDroneLabels() {
+        this.droneYawLabel.text = '偏航角(Yaw): -';
+        this.dronePitchLabel.text = '俯仰角(Pitch): -';
+        this.droneRollLabel.text = '横滚角(Roll): -';
+        this.droneAltitudeLabel.text = '高度(Altitude): -';
+        this.cameraGimbalPitchLabel.text = '云台俯仰: -';
+        this.cameraGimbalYawLabel.text = '云台偏航: -';
+        this.headingLabel.text = '航向角: -';
+        this.compassLabel.text = '罗盘方向: -';
     }
 }
 

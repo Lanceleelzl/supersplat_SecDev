@@ -65,6 +65,9 @@ class GltfModel extends Element {
     }
 
     remove() {
+        // 彻底清理渲染组件
+        this.cleanupRenderComponents();
+        
         // Remove the entity from its parent
         if (this.entity && this.entity.parent) {
             this.entity.parent.removeChild(this.entity);
@@ -72,8 +75,130 @@ class GltfModel extends Element {
     }
 
     destroy() {
-        this.entity?.destroy();
+        console.log('开始销毁GLB模型:', this.filename);
+        
+        // 彻底清理渲染组件
+        this.cleanupRenderComponents();
+        
+        // 清理物理碰撞器
+        try {
+            if (this.scene && this.scene.app && this.scene.app.root) {
+                const collider = this.scene.app.root.findOne((n: Entity) => n.name === '__gltfCollider' && (n as any)._gltfModel === this);
+                if (collider) {
+                    collider.destroy();
+                }
+            }
+        } catch (error) {
+            console.warn('清理GLB模型碰撞器时出错:', error);
+        }
+
+        // 清理缓存的边界信息
+        this._cachedWorldBound = null;
+        this._cachedWorldBoundFrame = -1;
+
+        // 从父节点移除实体
+        if (this.entity && this.entity.parent) {
+            this.entity.parent.removeChild(this.entity);
+        }
+
+        // 销毁实体
+        if (this.entity) {
+            try {
+                this.entity.destroy();
+                console.log('GLB模型实体已销毁:', this.filename);
+            } catch (error) {
+                console.warn('销毁GLB模型实体时出错:', error);
+            }
+            this.entity = null;
+        }
+
+        // 强制场景重新渲染
+        if (this.scene) {
+            this.scene.forceRender = true;
+        }
+
         super.destroy();
+        console.log('GLB模型销毁完成:', this.filename);
+    }
+
+    // 彻底清理渲染组件的辅助方法
+    private cleanupRenderComponents() {
+        if (!this.entity) return;
+
+        try {
+            // 递归清理所有子实体的渲染组件
+            const cleanupEntity = (entity: Entity) => {
+                if (!entity) return;
+
+                // 清理渲染组件
+                const render = entity.render;
+                if (render) {
+                    render.enabled = false;
+                    if (render.meshInstances) {
+                        render.meshInstances.forEach((meshInstance: any) => {
+                            if (meshInstance) {
+                                meshInstance.visible = false;
+
+                                // 从所有渲染层中移除mesh instance
+                                try {
+                                    if (this.scene && this.scene.app) {
+                                        const app = this.scene.app;
+                                        const layers = app.scene.layers;
+                                        if (layers.subLayerList) {
+                                            layers.subLayerList.forEach((layer: any) => {
+                                                if (layer.removeMeshInstances) {
+                                                    layer.removeMeshInstances([meshInstance]);
+                                                }
+                                            });
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.warn('从渲染层移除mesh instance时出错:', e);
+                                }
+
+                                // 清理mesh instance的AABB相关属性
+                                if (meshInstance.aabb) {
+                                    meshInstance.aabb = null;
+                                }
+                                if (typeof meshInstance._aabbVer !== 'undefined') {
+                                    meshInstance._aabbVer = null;
+                                }
+                                // 清理mesh instance的其他可能导致问题的属性
+                                if (meshInstance.mesh) {
+                                    meshInstance.mesh = null;
+                                }
+                                // 清理材质引用
+                                if (meshInstance.material) {
+                                    meshInstance.material = null;
+                                }
+                                // 清理变换矩阵
+                                if (meshInstance.node) {
+                                    meshInstance.node = null;
+                                }
+                            }
+                        });
+                        // 清空mesh instances数组
+                        render.meshInstances.length = 0;
+                    }
+
+                    // 尝试移除渲染组件
+                    try {
+                        entity.removeComponent('render');
+                    } catch (e) {
+                        console.warn('移除渲染组件时出错:', e);
+                    }
+                }                // 递归处理子实体
+                if (entity.children) {
+                    entity.children.slice().forEach((child: Entity) => {
+                        cleanupEntity(child);
+                    });
+                }
+            };
+
+            cleanupEntity(this.entity);
+        } catch (error) {
+            console.warn('清理渲染组件时出错:', error);
+        }
     }
 
     getLocalBound(): BoundingBox | null {
@@ -166,7 +291,7 @@ class GltfModel extends Element {
     }
 
     move(position?: Vec3, rotation?: Quat, scale?: Vec3) {
-        if (this.entity) {
+        if (this.entity && this.entity.enabled) {
             if (position) {
                 this.entity.setPosition(position);
             }
@@ -178,7 +303,10 @@ class GltfModel extends Element {
             }
 
             // Mark world bounds as dirty since the model moved
-            this.makeWorldBoundDirty();
+            // 只有在实体仍然有效时才更新边界
+            if (this.entity.parent) {
+                this.makeWorldBoundDirty();
+            }
 
             // Update physics collider if it exists
             try {
@@ -219,20 +347,39 @@ class GltfModel extends Element {
     makeWorldBoundDirty() {
         this._cachedWorldBound = null;
         this._cachedWorldBoundFrame = -1;
-        if (!this.entity) return;
-        const renderComponents = this.entity.findComponents('render');
-        renderComponents.forEach((render: any) => {
-            if (!render.meshInstances) return;
-            render.meshInstances.forEach((meshInstance: any) => {
-                if (meshInstance.aabb) {
-                    meshInstance._aabbVer = -1;
-                }
+        
+        // 如果实体不存在或不可用，直接返回
+        if (!this.entity || !this.entity.enabled || !this.entity.parent) return;
+        
+        try {
+            const renderComponents = this.entity.findComponents('render');
+            if (!renderComponents || renderComponents.length === 0) return;
+            
+            renderComponents.forEach((render: any) => {
+                if (!render || !render.enabled || !render.meshInstances) return;
+                
+                // 创建meshInstances的副本以避免在迭代过程中被修改
+                const meshInstances = [...render.meshInstances];
+                meshInstances.forEach((meshInstance: any) => {
+                    // 非常严格的安全检查
+                    if (meshInstance &&
+                        meshInstance.aabb !== null &&
+                        meshInstance.aabb !== undefined &&
+                        typeof meshInstance._aabbVer === 'number') {
+                        meshInstance._aabbVer = -1;
+                    }
+                });
             });
-        });
+        } catch (error) {
+            // 如果在访问mesh实例时出错，说明模型可能正在被销毁，忽略错误
+            console.warn('makeWorldBoundDirty 访问已销毁的mesh实例:', error);
+        }
     }
 
     set visible(value: boolean) {
-        if (this.entity) {
+        if (!this.entity) return;
+
+        try {
             if (value) {
                 // Make visible: add to scene if not already there
                 if (!this.entity.parent && this.scene) {
@@ -242,12 +389,15 @@ class GltfModel extends Element {
 
                 // Enable all render components recursively
                 const enableRendering = (entity: Entity) => {
+                    if (!entity) return;
                     const render = entity.render;
                     if (render) {
                         render.enabled = true;
                         if (render.meshInstances) {
                             render.meshInstances.forEach((meshInstance) => {
-                                meshInstance.visible = true;
+                                if (meshInstance && typeof meshInstance.visible !== 'undefined') {
+                                    meshInstance.visible = true;
+                                }
                             });
                         }
                     }
@@ -266,12 +416,15 @@ class GltfModel extends Element {
 
                 // Disable all render components recursively
                 const disableRendering = (entity: Entity) => {
+                    if (!entity) return;
                     const render = entity.render;
                     if (render) {
                         render.enabled = false;
                         if (render.meshInstances) {
                             render.meshInstances.forEach((meshInstance) => {
-                                meshInstance.visible = false;
+                                if (meshInstance && typeof meshInstance.visible !== 'undefined') {
+                                    meshInstance.visible = false;
+                                }
                             });
                         }
                     }
@@ -293,6 +446,8 @@ class GltfModel extends Element {
 
             // Fire visibility event for selection system
             this.scene?.events.fire('model.visibility', this);
+        } catch (error) {
+            console.warn('设置GLB模型可见性时出错:', error);
         }
     }
 
