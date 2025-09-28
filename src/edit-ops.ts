@@ -430,6 +430,27 @@ class SplatRenameOp {
     }
 }
 
+class GltfModelRenameOp {
+    name = 'gltfModelRename';
+    model: any; // GltfModel type
+    oldName: string;
+    newName: string;
+
+    constructor(model: any, newName: string) {
+        this.model = model;
+        this.oldName = model.filename;
+        this.newName = newName;
+    }
+
+    do() {
+        this.model.setCustomFilename(this.newName);
+    }
+
+    undo() {
+        this.model.setCustomFilename(this.oldName);
+    }
+}
+
 export {
     EditOp,
     SelectAllOp,
@@ -447,5 +468,6 @@ export {
     SetSplatColorAdjustmentOp,
     MultiOp,
     AddSplatOp,
-    SplatRenameOp
+    SplatRenameOp,
+    GltfModelRenameOp
 };

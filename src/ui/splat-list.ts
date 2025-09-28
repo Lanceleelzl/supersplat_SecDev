@@ -1,6 +1,6 @@
 import { Container, Label, Element as PcuiElement, TextInput } from '@playcanvas/pcui';
 
-import { SplatRenameOp } from '../edit-ops';
+import { SplatRenameOp, GltfModelRenameOp } from '../edit-ops';
 import { Element, ElementType } from '../element';
 import { Events } from '../events';
 import { GltfModel } from '../gltf-model';
@@ -226,6 +226,10 @@ class SplatList extends Container {
                 item.on('removeClicked', () => {
                     model.destroy();
                 });
+                // 添加GLB模型重命名事件处理
+                item.on('rename', (value: string) => {
+                    events.fire('edit.add', new GltfModelRenameOp(model, value));
+                });
             }
         });
 
@@ -249,6 +253,14 @@ class SplatList extends Container {
             const item = items.get(splat);
             if (item) {
                 item.name = splat.name;
+            }
+        });
+
+        // 添加GLB模型名称更新事件处理
+        events.on('model.name', (model: GltfModel) => {
+            const item = items.get(model);
+            if (item) {
+                item.name = model.filename;
             }
         });
 

@@ -28,15 +28,15 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     const deepCloneEntity = (originalEntity: any, namePrefix: string): any => {
         // 使用PlayCanvas的clone方法
         const cloned = originalEntity.clone();
-        
+
         // 设置唯一名称
         cloned.name = `${namePrefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        
+
         // 确保从父节点分离
         if (cloned.parent && cloned.parent !== originalEntity.parent) {
             cloned.parent.removeChild(cloned);
         }
-        
+
         // 递归处理子实体，确保它们也有唯一的名称和独立性
         if (cloned.children && cloned.children.length > 0) {
             cloned.children.forEach((child: any, index: number) => {
@@ -44,7 +44,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 child.enabled = true;
             });
         }
-        
+
         return cloned;
     };
 
@@ -62,20 +62,20 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             const originalPos = originalModel.entity.getLocalPosition();
             const originalRot = originalModel.entity.getLocalRotation();
             const originalScale = originalModel.entity.getLocalScale();
-            
+
             clonedEntity.setLocalPosition(originalPos);
             clonedEntity.setLocalRotation(originalRot);
             clonedEntity.setLocalScale(originalScale);
 
             // 创建一个新的GltfModel实例，传入自定义文件名
             const clonedModel = new GltfModel(originalModel.asset, clonedEntity, newFilename);
-            
+
             // 复制原始模型的属性
             clonedModel.visible = originalModel.visible;
-            
+
             // 确保实体被正确启用
             clonedEntity.enabled = true;
-            
+
             // 递归确保所有子实体也被正确启用
             function enableAllEntities(entity: any) {
                 entity.enabled = true;
@@ -84,9 +84,9 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 }
             }
             enableAllEntities(clonedEntity);
-            
+
             console.log('复制的模型创建成功:', newFilename, '实体名称:', clonedEntity.name);
-            
+
             return clonedModel;
         } catch (error) {
             console.error('克隆GLB模型时出错:', error);
@@ -99,7 +99,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         try {
             // 获取原始模型的文件信息
             const originalFilename = originalModel.filename;
-            
+
             // 检查是否有可用的文件数据
             if (!originalModel.asset) {
                 console.warn('无法复制模型：缺少资产引用');
@@ -108,10 +108,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
             // 创建新的文件名，使用中文"_复制"
             const copyFilename = originalFilename ? `${originalFilename}_复制` : '模型_复制';
-            
+
             // 使用克隆方式创建独立的模型
             const duplicatedModel = cloneGltfModel(originalModel, copyFilename, scene);
-            
+
             if (duplicatedModel) {
                 // 复制变换信息，保持原位（不偏移）
                 const originalPos = originalModel.entity.getPosition();
@@ -125,23 +125,23 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
                 // **关键修复：将实体添加到PlayCanvas的根节点**
                 scene.app.root.addChild(duplicatedModel.entity);
-                
+
                 // 将新模型添加到场景（会自动触发scene.elementAdded事件）
                 scene.add(duplicatedModel);
-                
+
                 // 强制刷新场景显示和渲染
                 scene.forceRender = true;
-                
+
                 // 立即触发一次渲染更新
                 setTimeout(() => {
                     scene.forceRender = true;
                 }, 10);
-                
+
                 console.log('GLB模型复制完成:', copyFilename, '实体已添加到根节点');
-                
+
                 return duplicatedModel;
             }
-            
+
             return null;
         } catch (error) {
             console.error('复制GLB模型时出错:', error);
@@ -584,21 +584,21 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.on('model.duplicate', (model) => {
         try {
             console.log('开始复制GLB模型:', model.filename);
-            
+
             // 创建模型的副本
             const duplicatedModel = duplicateGltfModel(model, scene);
-            
+
             if (duplicatedModel) {
                 // 先清空当前选择
                 events.fire('selection', null);
-                
+
                 // 强制刷新场景
                 scene.forceRender = true;
-                
+
                 // 延迟选中新模型，确保清空选择后再选中
                 setTimeout(() => {
                     scene.forceRender = true;
-                    
+
                     // 选中新复制的模型
                     events.fire('selection', duplicatedModel);
                     console.log('GLB模型复制完成，新模型名称:', duplicatedModel.filename);
@@ -613,7 +613,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.on('model.moved', (model) => {
         // 强制渲染刷新，确保原位和移动后的模型都正确显示
         scene.forceRender = true;
-        
+
         // 延迟额外刷新，确保显示正确
         setTimeout(() => {
             scene.forceRender = true;

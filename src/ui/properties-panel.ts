@@ -622,25 +622,25 @@ class PropertiesPanel extends Container {
 
             // 获取欧拉角 (以度为单位)
             const euler = rot.getEulerAngles();
-            
+
             // 无人机飞控标准参数转换
             // 注意：PlayCanvas使用左手坐标系，Y轴向上
-            
+
             // 获取原始角度值
             const originalYaw = -euler.y; // 原偏航角
             const originalPitch = -euler.x; // 原俯仰角
             const originalRoll = euler.z; // 原横滚角
-            
+
             // 高度(Altitude) - Y坐标即为高度
             const altitude = pos.y;
-            
+
             // 根据新的要求重新分配参数：
             // 云台俯仰角 = 原偏航角的值
             const gimbalPitch = this.normalizeAngle(originalYaw);
-            
+
             // 云台方向 = 原横滚角的值
             const gimbalYaw = this.clampAngle(originalRoll, -180, 180);
-            
+
             // 更新标签显示
             this.droneAltitudeLabel.text = `高度(Altitude): ${altitude.toFixed(3)}m`;
             this.cameraGimbalPitchLabel.text = `云台俯仰: ${gimbalPitch.toFixed(1)}°`;

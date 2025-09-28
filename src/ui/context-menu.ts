@@ -28,7 +28,7 @@ class ContextMenu extends Container {
         this.setupMenuItems();
         this.bindEvents();
         this.createMenuDOM();
-        
+
         // 添加到document.body以确保菜单可以覆盖其他元素
         document.body.appendChild(this.dom);
     }
@@ -111,7 +111,7 @@ class ContextMenu extends Container {
             menuItem.dom.addEventListener('click', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                
+
                 if (item.enabled ? item.enabled() : true) {
                     item.action();
                     this.hide();
@@ -129,7 +129,7 @@ class ContextMenu extends Container {
             const canvas = document.querySelector('canvas');
             if (canvas && canvas.contains(e.target as Node)) {
                 e.preventDefault();
-                
+
                 // 获取当前选中的模型
                 const selection = this.events.invoke('selection');
                 if (selection && selection.type === ElementType.model) {
@@ -201,7 +201,7 @@ class ContextMenu extends Container {
         items.forEach((item, index) => {
             const menuItem = this.menuItems[index];
             const isEnabled = menuItem.enabled ? menuItem.enabled() : true;
-            
+
             if (isEnabled) {
                 item.classList.remove('disabled');
                 (item as HTMLElement).style.opacity = '1';
@@ -219,12 +219,12 @@ class ContextMenu extends Container {
 
         try {
             console.log('开始原位复制GLB模型:', this.currentModel.filename);
-            
+
             // 触发复制事件并等待完成
             this.duplicateGltfModel(this.currentModel);
-            
+
             console.log('原位复制请求已发送');
-            
+
         } catch (error) {
             console.error('原位复制失败:', error);
         }
@@ -234,10 +234,10 @@ class ContextMenu extends Container {
         // 触发GLB模型复制事件
         try {
             console.log('触发GLB模型复制事件:', model.filename);
-            
+
             // 触发复制事件，编辑器会处理具体的复制逻辑
             this.events.fire('model.duplicate', model);
-            
+
         } catch (error) {
             console.error('复制GLB模型失败:', error);
             throw error;

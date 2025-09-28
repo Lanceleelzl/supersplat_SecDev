@@ -34,6 +34,11 @@ class GltfModel extends Element {
     // 设置自定义文件名的方法
     setCustomFilename(filename: string) {
         this._customFilename = filename;
+
+        // 触发模型名称更新事件
+        if (this.scene && this.scene.events) {
+            this.scene.events.fire('model.name', this);
+        }
     }
 
     // Setup physics collision detection for ray picking
@@ -69,14 +74,14 @@ class GltfModel extends Element {
     add() {
         // Entity is already added to the scene root in asset-loader or manually in duplication
         // This method is called when the element is added to the scene
-        
+
         // 确保实体在场景根节点中（对于复制的模型很重要）
         if (this.entity && this.scene && this.scene.app && this.scene.app.root) {
             if (this.entity.parent !== this.scene.app.root) {
                 this.scene.app.root.addChild(this.entity);
             }
         }
-        
+
         // 添加碰撞器以支持选择和交互
         this.setupPhysicsPicking();
     }
@@ -84,7 +89,7 @@ class GltfModel extends Element {
     remove() {
         // 彻底清理渲染组件
         this.cleanupRenderComponents();
-        
+
         // Remove the entity from its parent
         if (this.entity && this.entity.parent) {
             this.entity.parent.removeChild(this.entity);
@@ -93,10 +98,10 @@ class GltfModel extends Element {
 
     destroy() {
         console.log('开始销毁GLB模型:', this.filename);
-        
+
         // 彻底清理渲染组件
         this.cleanupRenderComponents();
-        
+
         // 清理物理碰撞器
         try {
             if (this.scene && this.scene.app && this.scene.app.root) {
@@ -364,17 +369,17 @@ class GltfModel extends Element {
     makeWorldBoundDirty() {
         this._cachedWorldBound = null;
         this._cachedWorldBoundFrame = -1;
-        
+
         // 如果实体不存在或不可用，直接返回
         if (!this.entity || !this.entity.enabled || !this.entity.parent) return;
-        
+
         try {
             const renderComponents = this.entity.findComponents('render');
             if (!renderComponents || renderComponents.length === 0) return;
-            
+
             renderComponents.forEach((render: any) => {
                 if (!render || !render.enabled || !render.meshInstances) return;
-                
+
                 // 创建meshInstances的副本以避免在迭代过程中被修改
                 const meshInstances = [...render.meshInstances];
                 meshInstances.forEach((meshInstance: any) => {
