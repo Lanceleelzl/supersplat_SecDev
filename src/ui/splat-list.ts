@@ -99,6 +99,189 @@ class CategoryContainer extends Container {
     }
 }
 
+class InspectionPointContainer extends Container {
+    private _collapsed: boolean = false;
+    private headerElement: Container;
+    private contentContainer: Container;
+    private collapseIcon: PcuiElement;
+    private pointLabel: Label;
+    private pointName: string;
+
+    constructor(pointName: string, args = {}) {
+        args = {
+            ...args,
+            class: ['inspection-point-container']
+        };
+        super(args);
+        
+        this.pointName = pointName;
+
+        // 创建标题头部
+        this.headerElement = new Container({
+            class: 'inspection-point-header'
+        });
+
+        // 创建折叠图标（L型符号）
+        this.collapseIcon = new PcuiElement({
+            dom: createSvg(collapseSvg),
+            class: 'inspection-point-collapse-icon'
+        });
+
+        // 创建巡检点标签
+        this.pointLabel = new Label({
+            text: pointName,
+            class: 'inspection-point-label'
+        });
+
+        // 创建操作按钮
+        const visible = new PcuiElement({
+            dom: createSvg(shownSvg),
+            class: 'inspection-point-visible'
+        });
+
+        const invisible = new PcuiElement({
+            dom: createSvg(hiddenSvg),
+            class: 'inspection-point-visible',
+            hidden: true
+        });
+
+        const duplicate = new PcuiElement({
+            dom: createSvg(selectDuplicateSvg),
+            class: 'inspection-point-duplicate'
+        });
+        duplicate.dom.title = '原位复制巡检点位';
+
+        const remove = new PcuiElement({
+            dom: createSvg(deleteSvg),
+            class: 'inspection-point-delete'
+        });
+        remove.dom.title = '删除巡检点位';
+
+        // 组装头部
+        this.headerElement.append(this.collapseIcon);
+        this.headerElement.append(this.pointLabel);
+        this.headerElement.append(visible);
+        this.headerElement.append(invisible);
+        this.headerElement.append(duplicate);
+        this.headerElement.append(remove);
+
+        // 创建内容容器（子项容器）
+        this.contentContainer = new Container({
+            class: 'inspection-point-content'
+        });
+
+        // 组装整体结构
+        this.append(this.headerElement);
+        this.append(this.contentContainer);
+
+        // 绑定头部点击事件（只在标签和折叠图标上触发）
+        this.collapseIcon.dom.addEventListener('click', (event: MouseEvent) => {
+            event.stopPropagation();
+            this.toggleCollapse();
+        });
+
+        this.pointLabel.dom.addEventListener('click', (event: MouseEvent) => {
+            event.stopPropagation();
+            this.toggleCollapse();
+        });
+
+        // 绑定操作按钮事件
+        visible.dom.addEventListener('click', (event: MouseEvent) => {
+            event.stopPropagation();
+            this.setVisible(false);
+            visible.hidden = true;
+            invisible.hidden = false;
+        });
+
+        invisible.dom.addEventListener('click', (event: MouseEvent) => {
+            event.stopPropagation();
+            this.setVisible(true);
+            visible.hidden = false;
+            invisible.hidden = true;
+        });
+
+        duplicate.dom.addEventListener('click', (event: MouseEvent) => {
+            event.stopPropagation();
+            this.emit('duplicateClicked', this.pointName);
+        });
+
+        remove.dom.addEventListener('click', (event: MouseEvent) => {
+            event.stopPropagation();
+            this.emit('removeClicked', this.pointName);
+        });
+
+        // 绑定悬停事件
+        this.headerElement.dom.addEventListener('mouseenter', () => {
+            this.headerElement.class.add('hover');
+        });
+
+        this.headerElement.dom.addEventListener('mouseleave', () => {
+            this.headerElement.class.remove('hover');
+        });
+    }
+
+    toggleCollapse() {
+        this._collapsed = !this._collapsed;
+        if (this._collapsed) {
+            this.contentContainer.hidden = true;
+            this.collapseIcon.dom.style.transform = 'rotate(-90deg)';
+            this.class.add('collapsed');
+        } else {
+            this.contentContainer.hidden = false;
+            this.collapseIcon.dom.style.transform = 'rotate(0deg)';
+            this.class.remove('collapsed');
+        }
+    }
+
+    appendChild(element: PcuiElement) {
+        this.contentContainer.append(element);
+    }
+
+    removeChild(element: PcuiElement) {
+        this.contentContainer.remove(element);
+    }
+
+    getPointName() {
+        return this.pointName;
+    }
+
+    set collapsed(value: boolean) {
+        if (this._collapsed !== value) {
+            this.toggleCollapse();
+        }
+    }
+
+    get collapsed() {
+        return this._collapsed;
+    }
+
+    isEmpty() {
+        return this.contentContainer.dom.children.length === 0;
+    }
+
+    setVisible(visible: boolean) {
+        // 设置巡检点位下所有模型的可见性
+        this.emit('visibilityChanged', this.pointName, visible);
+    }
+
+    // 重写emit方法保持兼容性
+    emit(name: string, arg0?: any, arg1?: any, arg2?: any, arg3?: any, arg4?: any, arg5?: any, arg6?: any, arg7?: any): this {
+        // 调用父类的emit方法
+        super.emit(name, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+        
+        // 处理自定义事件
+        if (name === 'duplicateClicked') {
+            console.log('巡检点位复制:', arg0);
+        } else if (name === 'removeClicked') {
+            console.log('巡检点位删除:', arg0);
+        } else if (name === 'visibilityChanged') {
+            console.log('巡检点位可见性变更:', arg0, arg1);
+        }
+        
+        return this;
+    }
+}
+
 class SplatItem extends Container {
     getName: () => string;
     setName: (value: string) => void;
@@ -287,6 +470,8 @@ class SplatItem extends Container {
 class SplatList extends Container {
     private splatCategory: CategoryContainer;
     private gltfCategory: CategoryContainer;
+    private inspectionCategory: CategoryContainer;
+    private inspectionPoints: Map<string, InspectionPointContainer>;
 
     constructor(events: Events, args = {}) {
         args = {
@@ -301,10 +486,13 @@ class SplatList extends Container {
         // 创建分类容器
         this.splatCategory = new CategoryContainer('Splat Models (PLY/SPLAT/SOG)');
         this.gltfCategory = new CategoryContainer('GLTF Models');
+        this.inspectionCategory = new CategoryContainer('巡检点位');
+        this.inspectionPoints = new Map<string, InspectionPointContainer>();
 
         // 添加分类容器到主容器
         this.append(this.splatCategory);
         this.append(this.gltfCategory);
+        this.append(this.inspectionCategory);
 
         // edit input used during renames
         const edit = new TextInput({
@@ -343,42 +531,100 @@ class SplatList extends Container {
                 });
             } else if (element.type === ElementType.model) {
                 const model = element as GltfModel;
-                const item = new SplatItem(model.filename, edit);
-                this.gltfCategory.appendToContent(item);
-                items.set(model, item);
-
-                // 绑定选择事件
-                item.on('click', () => {
-                    events.fire('selection', model);
-                });
-
-                item.on('visible', () => {
-                    if (model.entity) {
-                        model.visible = true;
+                
+                // 检查是否是巡检相关模型
+                const isInspectionModel = (model as any).isInspectionModel;
+                const inspectionPointName = (model as any).inspectionPointName;
+                const inspectionMarkerName = (model as any).inspectionMarkerName;
+                
+                if (isInspectionModel && inspectionPointName) {
+                    // 这是巡检点的子模型
+                    let pointContainer = this.inspectionPoints.get(inspectionPointName);
+                    
+                    if (!pointContainer) {
+                        // 创建新的巡检点容器
+                        pointContainer = new InspectionPointContainer(inspectionPointName);
+                        this.inspectionPoints.set(inspectionPointName, pointContainer);
+                        this.inspectionCategory.appendToContent(pointContainer);
+                        
+                        // 绑定巡检点位级别的事件
+                        pointContainer.on('duplicateClicked', (pointName: string) => {
+                            console.log('巡检点位原位复制:', pointName);
+                            events.fire('inspection.duplicatePoint', pointName);
+                        });
+                        
+                        pointContainer.on('removeClicked', (pointName: string) => {
+                            console.log('删除巡检点位:', pointName);
+                            events.fire('inspection.deletePoint', pointName);
+                        });
+                        
+                        pointContainer.on('visibilityChanged', (pointName: string, visible: boolean) => {
+                            console.log('巡检点位可见性变更:', pointName, visible);
+                            events.fire('inspection.togglePointVisibility', pointName, visible);
+                        });
                     }
+                    
+                    // 创建子模型项
+                    const displayName = inspectionMarkerName || model.filename;
+                    const item = new SplatItem(displayName, edit);
+                    item.class.add('inspection-model');
+                    
+                    // 添加到巡检点容器
+                    pointContainer.appendChild(item);
+                    items.set(model, item);
+                } else {
+                    // 普通GLTF模型
+                    const item = new SplatItem(model.filename, edit);
+                    this.gltfCategory.appendToContent(item);
+                    items.set(model, item);
+                }
 
-                    // also select it if there is no other selection
-                    if (!events.invoke('selection')) {
+                // 绑定事件（对所有模型统一处理）
+                const currentItem = items.get(model);
+                if (currentItem) {
+                    // 绑定选择事件
+                    currentItem.on('click', () => {
                         events.fire('selection', model);
-                    }
-                });
-                item.on('invisible', () => {
-                    if (model.entity) {
-                        model.visible = false;
-                    }
-                });
-                item.on('duplicateClicked', () => {
-                    // 触发GLB模型复制事件，与右键菜单功能相同
-                    events.fire('model.duplicate', model);
-                    console.log('GLB模型原位复制:', model.filename);
-                });
-                item.on('removeClicked', () => {
-                    model.destroy();
-                });
-                // 添加GLB模型重命名事件处理
-                item.on('rename', (value: string) => {
-                    events.fire('edit.add', new GltfModelRenameOp(model, value));
-                });
+                    });
+
+                    currentItem.on('visible', () => {
+                        if (model.entity) {
+                            model.visible = true;
+                        }
+
+                        // also select it if there is no other selection
+                        if (!events.invoke('selection')) {
+                            events.fire('selection', model);
+                        }
+                    });
+                    
+                    currentItem.on('invisible', () => {
+                        if (model.entity) {
+                            model.visible = false;
+                        }
+                    });
+                    
+                    currentItem.on('duplicateClicked', () => {
+                        if (isInspectionModel) {
+                            // 巡检模型复制
+                            events.fire('inspection.duplicateModel', inspectionPointName, model);
+                            console.log('巡检模型原位复制');
+                        } else {
+                            // 普通GLB模型复制
+                            events.fire('model.duplicate', model);
+                            console.log('GLB模型原位复制:', model.filename);
+                        }
+                    });
+                    
+                    currentItem.on('removeClicked', () => {
+                        model.destroy();
+                    });
+                    
+                    // 添加GLB模型重命名事件处理
+                    currentItem.on('rename', (value: string) => {
+                        events.fire('edit.add', new GltfModelRenameOp(model, value));
+                    });
+                }
             }
         });
 
@@ -389,7 +635,26 @@ class SplatList extends Container {
                     if (element.type === ElementType.splat) {
                         this.splatCategory.removeFromContent(item);
                     } else if (element.type === ElementType.model) {
-                        this.gltfCategory.removeFromContent(item);
+                        const model = element as GltfModel;
+                        const isInspectionModel = (model as any).isInspectionModel;
+                        const inspectionPointName = (model as any).inspectionPointName;
+                        
+                        if (isInspectionModel && inspectionPointName) {
+                            // 从巡检点容器中移除
+                            const pointContainer = this.inspectionPoints.get(inspectionPointName);
+                            if (pointContainer) {
+                                pointContainer.removeChild(item);
+                                
+                                // 如果巡检点容器为空，移除整个容器
+                                if (pointContainer.isEmpty()) {
+                                    this.inspectionCategory.removeFromContent(pointContainer);
+                                    this.inspectionPoints.delete(inspectionPointName);
+                                }
+                            }
+                        } else {
+                            // 普通GLTF模型
+                            this.gltfCategory.removeFromContent(item);
+                        }
                     }
                     items.delete(element);
                 }

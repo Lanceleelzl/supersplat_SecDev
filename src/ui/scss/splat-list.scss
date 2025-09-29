@@ -150,4 +150,171 @@
             }
         }
     }
+
+    // 巡检点位样式
+    .category-container {
+        &:last-child {
+            .category-label {
+                color: #4CAF50; // 巡检点位使用绿色
+            }
+        }
+    }
+
+    // 巡检点位容器样式
+    .inspection-point-container {
+        margin-bottom: 4px;
+        border-radius: 4px;
+        background-color: rgba(76, 175, 80, 0.02);
+        
+        .inspection-point-header {
+            display: flex;
+            align-items: center;
+            padding: 6px 8px;
+            background-color: rgba(76, 175, 80, 0.08);
+            border-radius: 4px;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.2s ease;
+            border-left: 3px solid #4CAF50;
+
+            &:hover, &.hover {
+                background-color: rgba(76, 175, 80, 0.12);
+            }
+        }
+
+        .inspection-point-collapse-icon {
+            width: 16px;
+            height: 16px;
+            margin-right: 8px;
+            transition: transform 0.2s ease;
+            color: #4CAF50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            svg {
+                width: 12px;
+                height: 12px;
+                fill: currentColor;
+            }
+        }
+
+        .inspection-point-label {
+            font-weight: 600;
+            font-size: 13px;
+            color: #2E7D32;
+            flex-grow: 1;
+        }
+
+        .inspection-point-visible {
+            flex-grow: 0;
+            flex-shrink: 0;
+            width: 24px;
+            height: 24px;
+            line-height: 24px;
+            color: $text-secondary;
+            cursor: pointer;
+
+            &:hover {
+                color: $text-primary;
+            }
+        }
+
+        .inspection-point-duplicate {
+            flex-grow: 0;
+            flex-shrink: 0;
+            padding: 4px;
+            width: 16px;
+            height: 16px;
+            line-height: 16px;
+            color: $text-secondary;
+            cursor: pointer;
+
+            &:hover {
+                color: $text-primary;
+            }
+        }
+
+        .inspection-point-delete {
+            flex-grow: 0;
+            flex-shrink: 0;
+            padding: 4px;
+            width: 16px;
+            height: 16px;
+            line-height: 16px;
+            color: $text-secondary;
+            cursor: pointer;
+
+            &:hover {
+                color: $text-primary;
+            }
+        }
+
+        .inspection-point-content {
+            padding-left: 0;
+            position: relative;
+            
+            // 主垂直连接线
+            &::before {
+                content: '';
+                position: absolute;
+                left: 20px;
+                top: 0;
+                bottom: 0;
+                width: 2px;
+                background-color: #81C784;
+            }
+        }
+
+        &.collapsed .inspection-point-content {
+            display: none;
+        }
+
+        // 巡检模型（子级）的样式
+        .splat-item.inspection-model {
+            margin: 2px 0 2px 20px;
+            padding: 4px 8px;
+            background-color: rgba(76, 175, 80, 0.03);
+            border-radius: 3px;
+            position: relative;
+            
+            // L型连接线 - 水平线（从主垂直线延伸到项目）
+            &::after {
+                content: '';
+                position: absolute;
+                left: -20px;
+                top: 50%;
+                width: 16px;
+                height: 2px;
+                background-color: #81C784;
+                transform: translateY(-1px);
+            }
+
+            // 最后一个子项需要覆盖主垂直线的底部
+            &:last-child::before {
+                content: '';
+                position: absolute;
+                left: -20px;
+                top: calc(50% + 1px);
+                bottom: -2px;
+                width: 2px;
+                background-color: rgba(76, 175, 80, 0.02); // 用背景色覆盖
+            }
+            
+            .splat-item-text {
+                font-size: 12px;
+                color: #388E3C;
+                font-weight: 500;
+            }
+
+            &:hover {
+                background-color: rgba(76, 175, 80, 0.06);
+            }
+
+            &.selected {
+                background-color: rgba(76, 175, 80, 0.15);
+                border-left: 2px solid #4CAF50;
+            }
+        }
+    }
 }

@@ -73,6 +73,11 @@ class Menu extends Container {
             class: 'menu-option'
         });
 
+        const inspection = new Label({
+            text: localize('inspection'),
+            class: 'menu-option'
+        });
+
         const help = new Label({
             text: localize('help'),
             class: 'menu-option'
@@ -102,6 +107,7 @@ class Menu extends Container {
         });
         buttonsContainer.append(scene);
         buttonsContainer.append(selection);
+        buttonsContainer.append(inspection);
         buttonsContainer.append(render);
         buttonsContainer.append(help);
         buttonsContainer.append(collapse);
@@ -232,6 +238,12 @@ class Menu extends Container {
             onSelect: async () => await events.invoke('show.videoSettingsDialog')
         }]);
 
+        const inspectionMenuPanel = new MenuPanel([{
+            text: localize('inspection.add-point'),
+            icon: createSvg(sceneImport),
+            onSelect: () => events.fire('inspection.addPoint')
+        }]);
+
         const helpMenuPanel = new MenuPanel([{
             text: localize('help.shortcuts'),
             icon: 'E136',
@@ -276,6 +288,7 @@ class Menu extends Container {
         this.append(fileMenuPanel);
         this.append(exportMenuPanel);
         this.append(selectionMenuPanel);
+        this.append(inspectionMenuPanel);
         this.append(renderMenuPanel);
         this.append(helpMenuPanel);
 
@@ -285,6 +298,9 @@ class Menu extends Container {
         }, {
             dom: selection.dom,
             menuPanel: selectionMenuPanel
+        }, {
+            dom: inspection.dom,
+            menuPanel: inspectionMenuPanel
         }, {
             dom: render.dom,
             menuPanel: renderMenuPanel

@@ -291,6 +291,10 @@ const localizeInit = () => {
                     'select.duplicate': 'Duplicate',
                     'select.separate': 'Separate',
 
+                    // Inspection menu
+                    'inspection': 'Inspection',
+                    'inspection.add-point': 'Add Inspection Point',
+
                     // Help menu
                     'help': 'Help',
                     'help.shortcuts': 'Keyboard Shortcuts',
@@ -1280,6 +1284,10 @@ const localizeInit = () => {
                     'select.reset': '重置 Splat',
                     'select.duplicate': '复制',
                     'select.separate': '分离',
+
+                    // Inspection menu
+                    'inspection': '巡检',
+                    'inspection.add-point': '添加巡检点',
 
                     // Help menu
                     'help': '帮助',
