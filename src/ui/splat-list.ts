@@ -113,7 +113,7 @@ class InspectionPointContainer extends Container {
             class: ['inspection-point-container']
         };
         super(args);
-        
+
         this.pointName = pointName;
 
         // 创建标题头部
@@ -268,7 +268,7 @@ class InspectionPointContainer extends Container {
     emit(name: string, arg0?: any, arg1?: any, arg2?: any, arg3?: any, arg4?: any, arg5?: any, arg6?: any, arg7?: any): this {
         // 调用父类的emit方法
         super.emit(name, arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
-        
+
         // 处理自定义事件
         if (name === 'duplicateClicked') {
             console.log('巡检点位复制:', arg0);
@@ -277,7 +277,7 @@ class InspectionPointContainer extends Container {
         } else if (name === 'visibilityChanged') {
             console.log('巡检点位可见性变更:', arg0, arg1);
         }
-        
+
         return this;
     }
 }
@@ -531,44 +531,44 @@ class SplatList extends Container {
                 });
             } else if (element.type === ElementType.model) {
                 const model = element as GltfModel;
-                
+
                 // 检查是否是巡检相关模型
                 const isInspectionModel = (model as any).isInspectionModel;
                 const inspectionPointName = (model as any).inspectionPointName;
                 const inspectionMarkerName = (model as any).inspectionMarkerName;
-                
+
                 if (isInspectionModel && inspectionPointName) {
                     // 这是巡检点的子模型
                     let pointContainer = this.inspectionPoints.get(inspectionPointName);
-                    
+
                     if (!pointContainer) {
                         // 创建新的巡检点容器
                         pointContainer = new InspectionPointContainer(inspectionPointName);
                         this.inspectionPoints.set(inspectionPointName, pointContainer);
                         this.inspectionCategory.appendToContent(pointContainer);
-                        
+
                         // 绑定巡检点位级别的事件
                         pointContainer.on('duplicateClicked', (pointName: string) => {
                             console.log('巡检点位原位复制:', pointName);
                             events.fire('inspection.duplicatePoint', pointName);
                         });
-                        
+
                         pointContainer.on('removeClicked', (pointName: string) => {
                             console.log('删除巡检点位:', pointName);
                             events.fire('inspection.deletePoint', pointName);
                         });
-                        
+
                         pointContainer.on('visibilityChanged', (pointName: string, visible: boolean) => {
                             console.log('巡检点位可见性变更:', pointName, visible);
                             events.fire('inspection.togglePointVisibility', pointName, visible);
                         });
                     }
-                    
+
                     // 创建子模型项
                     const displayName = inspectionMarkerName || model.filename;
                     const item = new SplatItem(displayName, edit);
                     item.class.add('inspection-model');
-                    
+
                     // 添加到巡检点容器
                     pointContainer.appendChild(item);
                     items.set(model, item);
@@ -597,13 +597,13 @@ class SplatList extends Container {
                             events.fire('selection', model);
                         }
                     });
-                    
+
                     currentItem.on('invisible', () => {
                         if (model.entity) {
                             model.visible = false;
                         }
                     });
-                    
+
                     currentItem.on('duplicateClicked', () => {
                         if (isInspectionModel) {
                             // 巡检模型复制
@@ -615,11 +615,11 @@ class SplatList extends Container {
                             console.log('GLB模型原位复制:', model.filename);
                         }
                     });
-                    
+
                     currentItem.on('removeClicked', () => {
                         model.destroy();
                     });
-                    
+
                     // 添加GLB模型重命名事件处理
                     currentItem.on('rename', (value: string) => {
                         events.fire('edit.add', new GltfModelRenameOp(model, value));
@@ -638,13 +638,13 @@ class SplatList extends Container {
                         const model = element as GltfModel;
                         const isInspectionModel = (model as any).isInspectionModel;
                         const inspectionPointName = (model as any).inspectionPointName;
-                        
+
                         if (isInspectionModel && inspectionPointName) {
                             // 从巡检点容器中移除
                             const pointContainer = this.inspectionPoints.get(inspectionPointName);
                             if (pointContainer) {
                                 pointContainer.removeChild(item);
-                                
+
                                 // 如果巡检点容器为空，移除整个容器
                                 if (pointContainer.isEmpty()) {
                                     this.inspectionCategory.removeFromContent(pointContainer);

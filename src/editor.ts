@@ -915,7 +915,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
     events.on('inspection.addPoint', async () => {
         try {
             console.log('开始添加巡检点...');
-            
+
             // 获取当前相机位置
             const cameraPosition = scene.camera.entity.getPosition();
             console.log('相机位置:', cameraPosition);
@@ -926,22 +926,22 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             // 加载方位标模型
             const modelPath = '/model/marker.glb';
             console.log('正在加载模型:', modelPath);
-            
+
             let model: any;
             try {
                 const response = await fetch(modelPath);
-                
+
                 if (!response.ok) {
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
 
                 const blob = await response.blob();
                 console.log('模型文件大小:', blob.size, 'bytes');
-                
+
                 if (blob.size === 0) {
                     throw new Error('模型文件为空');
                 }
-                
+
                 const file = new File([blob], 'marker.glb', { type: 'model/gltf-binary' });
 
                 // 使用AssetLoader加载模型
@@ -951,33 +951,33 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     filename: 'marker.glb'
                 });
                 console.log('模型加载结果:', model);
-                
+
                 if (!model) {
                     throw new Error('AssetLoader返回null');
                 }
-                
+
             } catch (loadError) {
                 console.error('GLB模型加载失败，创建简单立方体作为替代:', loadError);
-                
+
                 // 暂时抛出错误，稍后处理备用方案
                 throw new Error(`模型加载失败: ${loadError.message}`);
             }
 
             if (model && model.entity) {
                 console.log('模型实体创建成功');
-                
+
                 // 不设置位置，保持默认原点位置 (0, 0, 0)，与文件拖拽加载行为一致
                 // model.entity.setPosition(cameraPosition.x, cameraPosition.y, cameraPosition.z);
                 console.log('保持模型在原点位置 (0, 0, 0)');
-                
+
                 // 确保模型可见和启用
                 model.entity.enabled = true;
                 model.visible = true;
-                
+
                 // 保持模型原始大小，不进行缩放
                 model.entity.setLocalScale(1, 1, 1);
                 console.log('保持模型原始大小');
-                
+
                 // 设置模型为巡检点的子模型
                 if (model instanceof GltfModel) {
                     const markerName = `marker${String(inspectionPointCounter).padStart(2, '0')}`;
@@ -988,23 +988,23 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     (model as any).inspectionMarkerName = markerName;
                     console.log('设置模型属性:', markerName, '属于', pointName);
                 }
-                
+
                 // 创建巡检点位记录（不存储位置，因为模型在原点）
                 inspectionPoints.set(pointName, {
                     models: [model as GltfModel],
                     position: { x: 0, y: 0, z: 0 } // 原点位置
                 });
                 console.log('创建巡检点位记录（原点位置）');
-                
+
                 // 将模型添加到场景（会自动触发 scene.elementAdded 事件）
                 scene.add(model);
                 console.log('模型添加到场景');
-                
+
                 inspectionPointCounter++;
-                
+
                 console.log(`成功添加巡检点: ${pointName}`);
                 console.log('当前场景中的元素数量:', scene.elements.length);
-                
+
                 // 选择新创建的模型以便查看
                 setTimeout(() => {
                     events.fire('selection', model);
@@ -1060,7 +1060,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                         if (newModel instanceof GltfModel) {
                             const newPointNumber = String(inspectionPointCounter).padStart(2, '0');
                             const newMarkerName = `marker${newPointNumber}${i > 0 ? `-${i + 1}` : ''}`;
-                            
+
                             newModel.setCustomFilename(newMarkerName);
                             (newModel as any).isInspectionModel = true; // 设置为子模型，不是父级
                             (newModel as any).inspectionPointName = newPointName;
@@ -1123,7 +1123,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                         const existingMarkers = inspectionPoint.models.length;
                         const pointNumber = pointName.replace('巡检点位', '');
                         newMarkerName = `marker${pointNumber}-${existingMarkers + 1}`;
-                        
+
                         newModel.setCustomFilename(newMarkerName);
                         (newModel as any).isInspectionModel = true;
                         (newModel as any).inspectionPointName = pointName;
@@ -1133,10 +1133,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
                     // 添加到巡检点位
                     inspectionPoint.models.push(newModel as GltfModel);
-                    
+
                     // 添加到场景（会自动触发 scene.elementAdded 事件）
                     scene.add(newModel);
-                    
+
                     console.log(`在巡检点位 ${pointName} 中复制模型，新名称: ${newMarkerName}`);
                 }
             } catch (error) {
@@ -1154,10 +1154,10 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 for (const model of inspectionPoint.models) {
                     model.destroy();
                 }
-                
+
                 // 从记录中移除
                 inspectionPoints.delete(pointName);
-                
+
                 console.log(`删除巡检点位: ${pointName}`);
             } catch (error) {
                 console.error('删除巡检点位失败:', error);
@@ -1177,7 +1177,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                         model.entity.enabled = visible;
                     }
                 }
-                
+
                 console.log(`设置巡检点位 ${pointName} 可见性: ${visible}`);
             } catch (error) {
                 console.error('设置巡检点位可见性失败:', error);

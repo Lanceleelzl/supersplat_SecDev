@@ -306,7 +306,7 @@ class ContextMenu extends Container {
         try {
             let elementName = '';
             let elementType = '';
-            
+
             if (this.currentModel) {
                 elementName = this.currentModel.filename;
                 elementType = 'GLB模型';
