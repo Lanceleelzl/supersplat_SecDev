@@ -29,6 +29,11 @@ const createSvg = (svgString: string) => {
 };
 
 class Menu extends Container {
+    private snapshotPreviewEnabled = false;
+    private snapshotMenuItem: any = null;
+    private snapshotMenuLabel: Label | null = null;
+    private inspectionMenuPanel: MenuPanel | null = null;
+
     constructor(events: Events, args = {}) {
         args = {
             ...args,
@@ -238,10 +243,27 @@ class Menu extends Container {
             onSelect: async () => await events.invoke('show.videoSettingsDialog')
         }]);
 
-        const inspectionMenuPanel = new MenuPanel([{
+        // 创建快照预览菜单项
+        this.snapshotMenuItem = {
+            text: '☐ 快照预览',
+            icon: 'E8B7', // 使用相机图标保持对齐
+            onSelect: () => {
+                this.snapshotPreviewEnabled = !this.snapshotPreviewEnabled;
+                this.updateSnapshotMenuText();
+                events.fire('snapshot.toggle');
+            }
+        };
+
+        this.inspectionMenuPanel = new MenuPanel([{
             text: localize('inspection.add-point'),
             icon: createSvg(sceneImport),
             onSelect: () => events.fire('inspection.addPoint')
+        },
+        this.snapshotMenuItem,
+        {
+            text: '导出巡检参数',
+            icon: createSvg(sceneExport),
+            onSelect: () => events.fire('inspection.exportParams')
         }]);
 
         const helpMenuPanel = new MenuPanel([{
@@ -288,9 +310,14 @@ class Menu extends Container {
         this.append(fileMenuPanel);
         this.append(exportMenuPanel);
         this.append(selectionMenuPanel);
-        this.append(inspectionMenuPanel);
+        this.append(this.inspectionMenuPanel);
         this.append(renderMenuPanel);
         this.append(helpMenuPanel);
+
+        // 初始化快照菜单文本显示
+        setTimeout(() => {
+            this.updateSnapshotMenuText();
+        }, 0);
 
         const options: { dom: HTMLElement, menuPanel: MenuPanel }[] = [{
             dom: scene.dom,
@@ -300,7 +327,7 @@ class Menu extends Container {
             menuPanel: selectionMenuPanel
         }, {
             dom: inspection.dom,
-            menuPanel: inspectionMenuPanel
+            menuPanel: this.inspectionMenuPanel
         }, {
             dom: render.dom,
             menuPanel: renderMenuPanel
@@ -342,6 +369,24 @@ class Menu extends Container {
 
         window.addEventListener('pointerdown', checkEvent, true);
         window.addEventListener('pointerup', checkEvent, true);
+    }
+
+    private updateSnapshotMenuText() {
+        if (this.inspectionMenuPanel) {
+            // 找到快照预览菜单项的文本元素并更新
+            // 快照预览是第二个菜单项 (索引1)
+            const menuItems = this.inspectionMenuPanel.dom.querySelectorAll('.menu-row-text');
+            if (menuItems.length > 1) {
+                const snapshotTextElement = menuItems[1] as HTMLElement;
+                snapshotTextElement.textContent = this.snapshotPreviewEnabled ? '☑ 快照预览' : '☐ 快照预览';
+            }
+        }
+    }
+
+    // 公开方法供外部调用
+    public updateSnapshotPreviewStatus(enabled: boolean) {
+        this.snapshotPreviewEnabled = enabled;
+        this.updateSnapshotMenuText();
     }
 }
 

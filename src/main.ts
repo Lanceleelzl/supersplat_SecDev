@@ -26,6 +26,7 @@ import { SphereSelection } from './tools/sphere-selection';
 import { ToolManager } from './tools/tool-manager';
 import { registerTransformHandlerEvents } from './transform-handler';
 import { EditorUI } from './ui/editor';
+import { SnapshotView } from './ui/snapshot-view';
 
 declare global {
     interface LaunchParams {
@@ -265,6 +266,57 @@ const main = async () => {
     registerDocEvents(scene, events);
     registerRenderEvents(scene, events);
     initShortcuts(events);
+
+    // 创建单一的快照窗口
+    const snapshotView = new SnapshotView(events, scene);
+    editorUI.canvasContainer.append(snapshotView);
+    snapshotView.hidden = true; // 默认隐藏
+
+    // 设置固定位置
+    snapshotView.dom.style.position = 'absolute';
+    snapshotView.dom.style.left = '320px';
+    snapshotView.dom.style.top = '120px';
+
+    // 快照预览开关状态
+    let snapshotPreviewEnabled = false;
+
+    // 监听快照预览开关切换
+    events.on('snapshot.toggle', () => {
+        snapshotPreviewEnabled = !snapshotPreviewEnabled;
+        console.log('Snapshot preview toggled:', snapshotPreviewEnabled);
+
+        // 同步菜单显示状态
+        editorUI.menu.updateSnapshotPreviewStatus(snapshotPreviewEnabled);
+
+        if (!snapshotPreviewEnabled) {
+            snapshotView.hide();
+        }
+    });
+
+    // 监听marker选择事件
+    events.on('marker.selected', (model: any) => {
+        console.log('Marker selected, snapshot preview enabled:', snapshotPreviewEnabled);
+
+        // 只有开启快照预览时才显示窗口
+        if (snapshotPreviewEnabled) {
+            snapshotView.updateMarker(model);
+            snapshotView.show();
+        }
+    });
+
+    // 监听视口点击GLB模型事件，转换为marker选择
+    events.on('camera.focalPointPicked', (data: any) => {
+        if (data.model && (data.model as any).isInspectionModel && snapshotPreviewEnabled) {
+            console.log('Camera focal point picked for inspection model, showing snapshot');
+            // 触发marker选择事件，统一处理逻辑
+            events.fire('marker.selected', data.model);
+        }
+    });
+
+    // 监听快照窗口关闭事件
+    events.on('snapshot.close', () => {
+        snapshotView.hide();
+    });
 
     // 初始化文件处理器
     initFileHandler(scene, events, editorUI.appContainer.dom);

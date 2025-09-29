@@ -1009,6 +1009,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 setTimeout(() => {
                     events.fire('selection', model);
                     console.log('选择新创建的模型');
+
+                    // 触发marker选择事件以更新快照窗口
+                    if ((model as any).isInspectionModel) {
+                        events.fire('marker.selected', model);
+                    }
                 }, 100);
             } else {
                 throw new Error('模型加载失败');
@@ -1183,6 +1188,62 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 console.error('设置巡检点位可见性失败:', error);
             }
         }
+    });
+
+    // 监听selection事件，当选择巡检模型时触发marker.selected事件
+    events.on('selection', (element) => {
+        if (element && (element as any).isInspectionModel) {
+            // 触发marker选择事件以更新快照窗口
+            events.fire('marker.selected', element);
+            console.log('触发marker选择事件:', (element as any).inspectionMarkerName);
+        } else {
+            // 选择其他对象时隐藏快照窗口
+            events.fire('snapshot.hide');
+        }
+    });
+
+    // 监听marker位置变化（当模型被移动时）
+    events.on('transform.changed', (element) => {
+        if (element && (element as any).isInspectionModel) {
+            // 触发marker变换事件以更新快照窗口
+            events.fire('marker.transform', element);
+            console.log('marker位置已变化:', (element as any).inspectionMarkerName);
+        }
+    });
+
+    // 导出所有巡检点位的相机参数
+    events.on('inspection.exportParams', () => {
+        const allParams: any[] = [];
+
+        for (const [pointName, inspectionPoint] of inspectionPoints) {
+            const pointData = {
+                pointName,
+                position: inspectionPoint.position,
+                models: inspectionPoint.models.map(model => ({
+                    markerName: (model as any).inspectionMarkerName,
+                    filename: model.filename,
+                    position: model.entity?.getPosition(),
+                    rotation: model.entity?.getRotation(),
+                    scale: model.entity?.getLocalScale(),
+                    cameraParams: (model as any).cameraParams || null
+                }))
+            };
+            allParams.push(pointData);
+        }
+
+        // 创建JSON文件并下载
+        const jsonData = JSON.stringify(allParams, null, 2);
+        const blob = new Blob([jsonData], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `inspection_points_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        console.log('导出巡检点位参数:', allParams);
     });
 };
 

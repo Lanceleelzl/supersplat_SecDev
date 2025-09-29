@@ -19,6 +19,7 @@ import { PublishSettingsDialog } from './publish-settings-dialog';
 import { RightToolbar } from './right-toolbar';
 import { ScenePanel } from './scene-panel';
 import { ShortcutsPopup } from './shortcuts-popup';
+import { SnapshotView } from './snapshot-view';
 import { Spinner } from './spinner';
 import { TimelinePanel } from './timeline-panel';
 import { Tooltips } from './tooltips';
@@ -35,6 +36,7 @@ class EditorUI {
     toolsContainer: Container;   // 工具容器
     canvas: HTMLCanvasElement;   // HTML画布元素
     popup: Popup;                // 弹窗组件
+    menu: Menu;                  // 菜单组件
 
     constructor(events: Events) {
         localizeInit();
@@ -122,7 +124,7 @@ class EditorUI {
         const bottomToolbar = new BottomToolbar(events, tooltips);
         const rightToolbar = new RightToolbar(events, tooltips);
         const modeToggle = new ModeToggle(events, tooltips);
-        const menu = new Menu(events);
+        this.menu = new Menu(events);
 
         canvasContainer.dom.appendChild(canvas);
         canvasContainer.append(appLabel);
@@ -134,7 +136,7 @@ class EditorUI {
         canvasContainer.append(bottomToolbar);
         canvasContainer.append(rightToolbar);
         canvasContainer.append(modeToggle);
-        canvasContainer.append(menu);
+        canvasContainer.append(this.menu);
 
         // view axes container
         const viewCube = new ViewCube(events);

@@ -583,6 +583,11 @@ class Camera extends Element {
                                         model: foundModel,
                                         position: result.point ? result.point.clone?.() || result.point : nearPoint
                                     });
+
+                                    // 如果是巡检模型，也触发selection事件以保持一致性
+                                    if ((foundModel as any).isInspectionModel) {
+                                        scene.events.fire('selection', foundModel);
+                                    }
                                     return;
                                 }
                             }
@@ -603,6 +608,11 @@ class Camera extends Element {
                                     model: foundModel,
                                     position: result.point ? result.point.clone?.() || result.point : nearPoint
                                 });
+
+                                // 如果是巡检模型，也触发selection事件以保持一致性
+                                if ((foundModel as any).isInspectionModel) {
+                                    scene.events.fire('selection', foundModel);
+                                }
                                 return;
                             }
                         }

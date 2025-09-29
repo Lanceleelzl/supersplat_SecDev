@@ -538,7 +538,7 @@ class SplatList extends Container {
                 const inspectionMarkerName = (model as any).inspectionMarkerName;
 
                 if (isInspectionModel && inspectionPointName) {
-                    // 这是巡检点的子模型
+                    // 这是巡检点的子模型，只显示在巡检点位分类中
                     let pointContainer = this.inspectionPoints.get(inspectionPointName);
 
                     if (!pointContainer) {
