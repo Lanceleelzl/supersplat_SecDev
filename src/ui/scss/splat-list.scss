@@ -253,17 +253,6 @@
         .inspection-point-content {
             padding-left: 0;
             position: relative;
-            
-            // 主垂直连接线
-            &::before {
-                content: '';
-                position: absolute;
-                left: 20px;
-                top: 0;
-                bottom: 0;
-                width: 2px;
-                background-color: #81C784;
-            }
         }
 
         &.collapsed .inspection-point-content {
@@ -278,27 +267,33 @@
             border-radius: 3px;
             position: relative;
             
-            // L型连接线 - 水平线（从主垂直线延伸到项目）
+            // 水平连接线 - 所有子项都有
             &::after {
                 content: '';
                 position: absolute;
-                left: -20px;
+                left: -16px;
                 top: 50%;
-                width: 16px;
+                width: 12px;
                 height: 2px;
                 background-color: #81C784;
                 transform: translateY(-1px);
             }
 
-            // 最后一个子项需要覆盖主垂直线的底部
-            &:last-child::before {
+            // 垂直连接线 - 默认贯穿到底部
+            &::before {
                 content: '';
                 position: absolute;
-                left: -20px;
-                top: calc(50% + 1px);
+                left: -16px;
+                top: -2px;
                 bottom: -2px;
                 width: 2px;
-                background-color: rgba(76, 175, 80, 0.02); // 用背景色覆盖
+                background-color: #81C784;
+            }
+
+            // 最后一个子项和只有一个子项 - L型（竖线只到中心）
+            &:last-child::before,
+            &:first-child:last-child::before {
+                bottom: 50%;
             }
             
             .splat-item-text {

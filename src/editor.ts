@@ -1028,8 +1028,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         const inspectionPoint = inspectionPoints.get(pointName);
         if (inspectionPoint) {
             try {
-                // 生成新的巡检点位名称，使用自增编号
-                const newPointName = `巡检点位${String(inspectionPointCounter + 1).padStart(2, '0')}`;
+                // 生成新的巡检点位名称，使用当前计数
+                const newPointName = `巡检点位${String(inspectionPointCounter).padStart(2, '0')}`;
                 const newModels: GltfModel[] = [];
 
                 // 复制所有模型
@@ -1058,7 +1058,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
                         // 设置属性 - 作为巡检模型（子项）
                         if (newModel instanceof GltfModel) {
-                            const newPointNumber = String(inspectionPointCounter + 1).padStart(2, '0');
+                            const newPointNumber = String(inspectionPointCounter).padStart(2, '0');
                             const newMarkerName = `marker${newPointNumber}${i > 0 ? `-${i + 1}` : ''}`;
                             
                             newModel.setCustomFilename(newMarkerName);
