@@ -11,6 +11,18 @@ class GltfModel extends Element {
     private _cachedWorldBound: BoundingBox | null = null;
     private _cachedWorldBoundFrame = -1;
     private _customFilename: string | null = null;  // 添加自定义文件名属性
+    
+    // 相机参数存储（用于巡检点位的快照功能）
+    cameraParams?: {
+        position: { x: number, y: number, z: number };
+        rotation: { x: number, y: number, z: number, w: number };
+        fov: number;
+        nearClip: number;
+        farClip: number;
+        height: number;
+        pitch: number;
+        timestamp: number;
+    };
 
     constructor(asset: Asset, entity: Entity, customFilename?: string) {
         super(ElementType.model);

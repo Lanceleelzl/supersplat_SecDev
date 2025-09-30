@@ -379,9 +379,7 @@ class DataProcessor {
         glDevice.gl.readPixels(0, 0, transformA.width, 1, resources.minTexture.impl._glFormat, resources.minTexture.impl._glPixelType, resources.minData);
 
         glDevice.setRenderTarget(resources.maxRenderTarget);
-        glDevice.updateBegin();
         glDevice.gl.readPixels(0, 0, transformA.width, 1, resources.maxTexture.impl._glFormat, resources.maxTexture.impl._glPixelType, resources.maxData);
-        glDevice.updateEnd();
 
         // resolve mins/maxs
         const { minData, maxData } = resources;

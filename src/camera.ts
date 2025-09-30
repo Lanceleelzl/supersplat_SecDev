@@ -978,9 +978,7 @@ class Camera extends Element {
 
         // read pixels
         device.setRenderTarget(this.picker.renderTarget);
-        device.updateBegin();
         device.readPixels(x, this.picker.renderTarget.height - y - height, width, height, pixels);
-        device.updateEnd();
 
         const result: number[] = [];
         for (let i = 0; i < width * height; i++) {

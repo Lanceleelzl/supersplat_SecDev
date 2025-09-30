@@ -137,6 +137,9 @@ class EntityTransformHandler implements TransformHandler {
         this.target.move(t, r, s);
         this.top.newt.set(t, r, s);
         this.pop.newt.copy(transform);
+        
+        // 触发实时变换事件，用于快照预览等实时更新
+        this.events.fire('transform.changed', this.target);
     }
 
     end() {
@@ -145,6 +148,8 @@ class EntityTransformHandler implements TransformHandler {
 
         if (!oldt.equals(newt)) {
             this.events.fire('edit.add', new MultiOp([this.top, this.pop]));
+            // 触发变换完成事件
+            this.events.fire('transform.changed', this.target);
         }
 
         this.top = null;

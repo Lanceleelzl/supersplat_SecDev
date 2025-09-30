@@ -102,9 +102,7 @@ class Outline extends Element {
 
             const glDevice = device as WebglGraphicsDevice;
             glDevice.setRenderTarget(this.scene.camera.entity.camera.renderTarget);
-            glDevice.updateBegin();
             this.quadRender.render();
-            glDevice.updateEnd();
         });
     }
 
