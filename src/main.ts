@@ -283,7 +283,6 @@ const main = async () => {
     // 监听快照预览开关切换
     events.on('snapshot.toggle', () => {
         snapshotPreviewEnabled = !snapshotPreviewEnabled;
-        console.log('Snapshot preview toggled:', snapshotPreviewEnabled);
 
         // 同步菜单显示状态
         editorUI.menu.updateSnapshotPreviewStatus(snapshotPreviewEnabled);
@@ -295,8 +294,6 @@ const main = async () => {
 
     // 监听marker选择事件
     events.on('marker.selected', (model: any) => {
-        console.log('Marker selected, snapshot preview enabled:', snapshotPreviewEnabled);
-
         // 只有开启快照预览时才显示窗口
         if (snapshotPreviewEnabled) {
             snapshotView.updateMarker(model);
@@ -307,7 +304,6 @@ const main = async () => {
     // 监听视口点击GLB模型事件，转换为marker选择
     events.on('camera.focalPointPicked', (data: any) => {
         if (data.model && (data.model as any).isInspectionModel && snapshotPreviewEnabled) {
-            console.log('Camera focal point picked for inspection model, showing snapshot');
             // 触发marker选择事件，统一处理逻辑
             events.fire('marker.selected', data.model);
         }

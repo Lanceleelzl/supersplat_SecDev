@@ -68,7 +68,6 @@ export class SnapshotView extends Container {
         // 监听marker选择事件 - 统一由main.ts中的marker.selected事件处理
         this.events.on('marker.selected', (model: any) => {
             if (model && (model as any).isInspectionModel) {
-                console.log('Marker selected in snapshot view:', model);
                 this.currentMarker = model;
                 this.updateCameraFromMarker();
             }
@@ -94,18 +93,15 @@ export class SnapshotView extends Container {
 
         // 关闭按钮事件 - 强制阻止事件穿透
         closeBtn.dom.addEventListener('click', (e) => {
-            console.log('Snapshot close button clicked');
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
-            // 直接隐藏面板，不触发toggle事件
             this.closePanel();
             return false;
-        }, true);  // 使用捕获阶段
+        }, true);
 
         // 也监听mousedown和pointerdown事件来完全阻止穿透
         closeBtn.dom.addEventListener('mousedown', (e) => {
-            console.log('Snapshot close button mousedown');
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
@@ -113,7 +109,6 @@ export class SnapshotView extends Container {
         }, true);
 
         closeBtn.dom.addEventListener('pointerdown', (e) => {
-            console.log('Snapshot close button pointerdown');
             e.preventDefault();
             e.stopPropagation();
             e.stopImmediatePropagation();
@@ -192,9 +187,6 @@ export class SnapshotView extends Container {
             farClip: this.virtualCamera?.farClip || 1000,
             timestamp: Date.now()
         };
-
-        console.log(`更新快照相机位置: ${position.x}, ${position.y}, ${position.z}`);
-        console.log('相机参数已保存到marker:', (this.currentMarker as any).cameraParams);
     }
 
     // 开始渲染循环
@@ -240,7 +232,7 @@ export class SnapshotView extends Container {
                 this.drawPreview(ctx);
             }
         } catch (error) {
-            console.warn('快照窗口渲染错误:', error);
+            // 渲染错误静默处理
         }
     }
 
@@ -386,7 +378,6 @@ export class SnapshotView extends Container {
 
     // 关闭面板 - 模拟属性面板的关闭逻辑
     private closePanel() {
-        console.log('Closing snapshot panel');
         this.hidden = true;
         this.stopRendering();
         this.currentMarker = null;
@@ -394,17 +385,14 @@ export class SnapshotView extends Container {
 
     // 更新marker并调整相机参数
     updateMarker(model: any) {
-        console.log('Updating marker in snapshot view:', model);
         this.currentMarker = model;
         this.title.text = `快照预览 - ${model.name || 'Marker'}`;
 
         // 更新相机参数
         if (model.cameraParams) {
-            console.log('Using saved camera params:', model.cameraParams);
             this.updateCameraFromParams(model.cameraParams);
         } else {
             // 如果没有保存的相机参数，使用当前相机位置
-            console.log('Capturing current camera params');
             this.captureCurrentCameraParams();
         }
 
@@ -424,7 +412,7 @@ export class SnapshotView extends Container {
                 this.virtualCamera.fov = params.fov || 75;
             }
         } catch (error) {
-            console.error('Error updating camera from params:', error);
+            // 相机参数更新错误静默处理
         }
     }
 
