@@ -157,8 +157,8 @@ class InspectionExportPanel extends Container {
 
         buttonContainer.append(selectAllButton);
         buttonContainer.append(deselectAllButton);
-        buttonContainer.append(cancelButton);
         buttonContainer.append(exportButton);
+        buttonContainer.append(cancelButton);
 
         contentContainer.append(buttonContainer);
 

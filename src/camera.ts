@@ -56,7 +56,7 @@ const mod = (n: number, m: number) => ((n % m) + m) % m;
 
 // 相机控制类，继承自Element基类
 class Camera extends Element {
-    static debugPick = false; // 默认关闭拾取调试，需时设为 true
+    static debugPick = true; // 启用拾取调试以诊断问题
     controller: PointerController;  // 指针控制器
     entity: Entity;                 // 相机实体
     focalPointTween = new TweenValue({ x: 0, y: 0.5, z: 0 });  // 焦点补间动画
@@ -540,6 +540,14 @@ class Camera extends Element {
         const sx = screenX / target.clientWidth * scene.targetSize.width;
         const sy = screenY / target.clientHeight * scene.targetSize.height;
 
+        // 添加调试日志
+        if (Camera.debugPick) {
+            console.log('=== 拾取开始 ===');
+            console.log('屏幕坐标:', screenX, screenY);
+            console.log('场景中的GLB模型数量:', scene.getElementsByType(ElementType.model).length);
+            console.log('场景中的高斯模型数量:', scene.getElementsByType(ElementType.splat).length);
+        }
+
         // =============================
         // Step 0: Physics-based raycast (if physics components are present)
         // 优先使用物理系统的精确射线检测（可与复杂 mesh collider 搭配）。
@@ -577,6 +585,9 @@ class Camera extends Element {
                                     cur = cur.parent;
                                 }
                                 if (foundModel) {
+                                    if (Camera.debugPick) {
+                                        console.log('物理拾取成功 - GLB模型:', foundModel.filename);
+                                    }
 
                                     scene.events.fire('camera.focalPointPicked', {
                                         camera: this,
@@ -602,6 +613,9 @@ class Camera extends Element {
                                 cur = cur.parent;
                             }
                             if (foundModel) {
+                                if (Camera.debugPick) {
+                                    console.log('物理拾取成功 - GLB模型:', foundModel.filename);
+                                }
 
                                 scene.events.fire('camera.focalPointPicked', {
                                     camera: this,
@@ -621,6 +635,9 @@ class Camera extends Element {
             }
         } catch (e) {
             // Physics raycast failed, continue with other picking methods
+            if (Camera.debugPick) {
+                console.log('物理拾取失败:', e);
+            }
         }
         // First: GLB 模型拾取（多阶段）
         // 阶段顺序：
@@ -718,8 +735,17 @@ class Camera extends Element {
             }
 
             if (pickedModel) {
+                if (Camera.debugPick) {
+                    console.log('GLB模型拾取成功 - 阶段1:', pickedModel.filename);
+                    console.log('是否为巡检模型:', (pickedModel as any).isInspectionModel);
+                }
 
                 scene.events.fire('camera.focalPointPicked', { camera: this, model: pickedModel, position: pickedPoint });
+                
+                // 如果是巡检模型，也触发selection事件以保持一致性
+                if ((pickedModel as any).isInspectionModel) {
+                    scene.events.fire('selection', pickedModel);
+                }
                 return;
             }
 
@@ -831,12 +857,22 @@ class Camera extends Element {
             }
 
             if (pickedModel) {
+                if (Camera.debugPick) {
+                    console.log('GLB模型拾取成功 - 阶段2:', pickedModel.filename);
+                    console.log('是否为巡检模型:', (pickedModel as any).isInspectionModel);
+                }
+                
                 // 仅触发选中，不改变相机焦点（保持行为轻量）
                 scene.events.fire('camera.focalPointPicked', {
                     camera: this,
                     model: pickedModel,
                     position: pickedPoint
                 });
+                
+                // 如果是巡检模型，也触发selection事件以保持一致性
+                if ((pickedModel as any).isInspectionModel) {
+                    scene.events.fire('selection', pickedModel);
+                }
                 return; // 已成功选中 GLB，后续不再做 splat 拾取
             }
 
@@ -868,12 +904,21 @@ class Camera extends Element {
 
 
                 if (best.dist2 < threshold) {
+                    if (Camera.debugPick) {
+                        console.log('GLB模型拾取成功 - 阶段3(fallback):', best.model.filename);
+                        console.log('是否为巡检模型:', (best.model as any).isInspectionModel);
+                    }
 
                     scene.events.fire('camera.focalPointPicked', {
                         camera: this,
                         model: best.model,
                         position: best.model.worldBound?.center.clone() || nearPoint
                     });
+                    
+                    // 如果是巡检模型，也触发selection事件以保持一致性
+                    if ((best.model as any).isInspectionModel) {
+                        scene.events.fire('selection', best.model);
+                    }
                     return;
                 }
 
@@ -924,6 +969,10 @@ class Camera extends Element {
         }
 
         if (closestSplat) {
+            if (Camera.debugPick) {
+                console.log('高斯模型拾取成功:', closestSplat.filename);
+            }
+            
             this.setFocalPoint(closestP);
             this.setDistance(closestD / this.sceneRadius * this.fovFactor);
             scene.events.fire('camera.focalPointPicked', {
@@ -932,6 +981,10 @@ class Camera extends Element {
                 position: closestP
             });
         } else {
+            if (Camera.debugPick) {
+                console.log('没有拾取到任何模型');
+            }
+            
             // 点击空白区域时也触发事件，用于清空选择
             scene.events.fire('camera.focalPointPicked', {
                 camera: this,

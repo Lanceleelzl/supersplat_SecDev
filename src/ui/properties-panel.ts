@@ -321,34 +321,42 @@ class PropertiesPanel extends Container {
 
         // 监听相机焦点拾取事件（这个事件在每次点击时都会触发，包括点击同一个模型或高斯泼溅）
         this.events.on('camera.focalPointPicked', (details: { splat?: any, model?: GltfModel }) => {
+            console.log('camera.focalPointPicked 事件触发:', details);
+
             if (details.model && details.model.type === ElementType.model) {
                 // 检查模型是否可选择，不可选择的模型不显示属性面板
                 if (!details.model.selectable) {
                     console.log('模型不可选择，跳过属性面板显示:', details.model.filename);
                     return;
                 }
-                
-                // 如果面板隐藏了，重新显示
-                if (this.hidden) {
-                    this.currentModel = details.model;
-                    this.currentSplat = null;
-                    this.showPanel();
-                    this.showModelProperties(details.model);
-                }
+
+                console.log('选中GLB模型:', details.model.filename, '是否为巡检模型:', (details.model as any).isInspectionModel);
+
+                // 无论面板是否隐藏，都更新显示的模型
+                this.currentModel = details.model;
+                this.currentSplat = null;
+                this.showPanel();
+                this.showModelProperties(details.model);
+
             } else if (details.splat && details.splat.type === ElementType.splat) {
                 // 检查高斯泼溅是否可选择，不可选择的不显示属性面板
                 if (!details.splat.selectable) {
                     console.log('高斯泼溅不可选择，跳过属性面板显示:', details.splat.name);
                     return;
                 }
-                
-                // 如果面板隐藏了，重新显示
-                if (this.hidden) {
-                    this.currentSplat = details.splat;
-                    this.currentModel = null;
-                    this.showPanel();
-                    this.showSplatProperties(details.splat);
-                }
+
+                console.log('选中高斯模型:', details.splat.filename || details.splat.name);
+
+                // 无论面板是否隐藏，都更新显示的模型
+                this.currentSplat = details.splat;
+                this.currentModel = null;
+                this.showPanel();
+                this.showSplatProperties(details.splat);
+
+            } else {
+                // 点击空白区域，隐藏属性面板
+                console.log('点击空白区域，隐藏属性面板');
+                this.hideProperties();
             }
         });
 
@@ -373,6 +381,9 @@ class PropertiesPanel extends Container {
     }
 
     private showModelProperties(model: GltfModel) {
+        // 先清除之前的属性值和标签名称
+        this.clearLabels();
+
         this.currentModel = model;
         this.currentSplat = null;
         this.placeholder.hidden = true;
@@ -381,6 +392,9 @@ class PropertiesPanel extends Container {
     }
 
     private showSplatProperties(splat: Splat) {
+        // 先清除之前的属性值和标签名称
+        this.clearLabels();
+
         this.currentSplat = splat;
         this.currentModel = null;
         this.placeholder.hidden = true;
@@ -410,19 +424,51 @@ class PropertiesPanel extends Container {
             return;
         }
 
+        // 显示巡检点位模型相关标签
+        this.showRelevantLabels(true);
+
         try {
             // 基本信息
             this.nameLabel.dom.setAttribute('data-value', model.filename || '未知');
-            this.typeLabel.dom.setAttribute('data-value', 'GLB/glTF 模型');
 
-            // 几何信息
-            this.updateGeometryInfo(model);
+            // 检查是否为巡检点位模型
+            const isInspectionModel = (model as any).isInspectionModel;
 
-            // 变换信息
-            this.updateTransformInfo(model);
+            if (isInspectionModel) {
+                // 巡检点位模型显示特殊类型
+                this.typeLabel.dom.setAttribute('data-value', '巡检点位模型');
 
-            // 无人机飞控信息
-            this.calculateDroneFlightParameters(model);
+                // 为巡检点位模型显示专门的信息
+                this.updateInspectionModelInfo(model);
+            } else {
+                // 普通GLB模型显示标准信息
+                this.typeLabel.dom.setAttribute('data-value', 'GLB/glTF 模型');
+
+                // 恢复普通GLB模型的标签名称
+                this.boundingBoxLabel.dom.setAttribute('data-label', '包围盒');
+                this.verticesLabel.dom.setAttribute('data-label', '顶点数');
+                this.facesLabel.dom.setAttribute('data-label', '面数');
+                this.positionLabel.dom.setAttribute('data-label', '位置');
+                this.rotationLabel.dom.setAttribute('data-label', '旋转');
+                this.scaleLabel.dom.setAttribute('data-label', '缩放');
+                this.droneAltitudeLabel.dom.setAttribute('data-label', '高度(Altitude)');
+                this.cameraGimbalPitchLabel.dom.setAttribute('data-label', '云台俯仰');
+                this.cameraGimbalYawLabel.dom.setAttribute('data-label', '云台方向');
+
+                // 显示所有容器
+                this.geometryContainer.hidden = false;
+                this.transformContainer.hidden = false;
+                this.droneInfoContainer.hidden = false;
+
+                // 几何信息
+                this.updateGeometryInfo(model);
+
+                // 变换信息
+                this.updateTransformInfo(model);
+
+                // 无人机飞控信息
+                this.calculateDroneFlightParameters(model);
+            }
         } catch (error) {
             // 如果访问模型数据时出现错误，说明模型可能已被删除
             console.warn('属性面板更新时出错，可能模型已被删除:', error);
@@ -444,6 +490,9 @@ class PropertiesPanel extends Container {
             // this.hideProperties();
             // return;
         }
+
+        // 显示高斯模型相关标签
+        this.showRelevantLabels(false);
 
         try {
             // 基本信息
@@ -560,16 +609,103 @@ class PropertiesPanel extends Container {
     }
 
     private clearLabels() {
-        this.nameLabel.dom.setAttribute('data-value', '-');
-        this.typeLabel.dom.setAttribute('data-value', '-');
-        this.boundingBoxLabel.dom.setAttribute('data-value', '-');
-        this.verticesLabel.dom.setAttribute('data-value', '-');
-        this.facesLabel.dom.setAttribute('data-value', '-');
-        this.positionLabel.dom.setAttribute('data-value', '-');
-        this.rotationLabel.dom.setAttribute('data-value', '-');
-        this.scaleLabel.dom.setAttribute('data-value', '-');
+        // 清除data-value属性（用于巡检点位模型）
+        this.nameLabel.dom.setAttribute('data-value', '');
+        this.typeLabel.dom.setAttribute('data-value', '');
+        this.boundingBoxLabel.dom.setAttribute('data-value', '');
+        this.verticesLabel.dom.setAttribute('data-value', '');
+        this.facesLabel.dom.setAttribute('data-value', '');
+        this.positionLabel.dom.setAttribute('data-value', '');
+        this.rotationLabel.dom.setAttribute('data-value', '');
+        this.scaleLabel.dom.setAttribute('data-value', '');
+
+        // 清除text属性（用于高斯模型）
+        this.nameLabel.text = '';
+        this.typeLabel.text = '';
+        this.boundingBoxLabel.text = '';
+        this.verticesLabel.text = '';
+        this.facesLabel.text = '';
+        this.positionLabel.text = '';
+        this.rotationLabel.text = '';
+        this.scaleLabel.text = '';
+
+        // 隐藏所有标签以避免空白行
+        this.hideAllLabels();
+
+        // 重置标签名称为默认值
+        this.resetLabelNames();
+
         // 清空无人机飞控标签
         this.clearDroneLabels();
+    }
+
+    private resetLabelNames() {
+        // 重置几何信息标签名称
+        this.boundingBoxLabel.dom.setAttribute('data-label', '包围盒');
+        this.verticesLabel.dom.setAttribute('data-label', '顶点数');
+        this.facesLabel.dom.setAttribute('data-label', '面数');
+
+        // 重置变换信息标签名称
+        this.positionLabel.dom.setAttribute('data-label', '位置');
+        this.rotationLabel.dom.setAttribute('data-label', '旋转');
+        this.scaleLabel.dom.setAttribute('data-label', '缩放');
+
+        // 重置无人机飞控信息标签名称
+        this.droneAltitudeLabel.dom.setAttribute('data-label', '高度(Altitude)');
+        this.cameraGimbalPitchLabel.dom.setAttribute('data-label', '云台俯仰');
+        this.cameraGimbalYawLabel.dom.setAttribute('data-label', '云台方向');
+    }
+
+    private hideAllLabels() {
+        // 隐藏基本信息标签
+        this.nameLabel.dom.style.display = 'none';
+        this.typeLabel.dom.style.display = 'none';
+
+        // 隐藏几何信息标签
+        this.boundingBoxLabel.dom.style.display = 'none';
+        this.verticesLabel.dom.style.display = 'none';
+        this.facesLabel.dom.style.display = 'none';
+
+        // 隐藏变换信息标签
+        this.positionLabel.dom.style.display = 'none';
+        this.rotationLabel.dom.style.display = 'none';
+        this.scaleLabel.dom.style.display = 'none';
+
+        // 隐藏无人机飞控信息标签
+        this.droneAltitudeLabel.dom.style.display = 'none';
+        this.cameraGimbalPitchLabel.dom.style.display = 'none';
+        this.cameraGimbalYawLabel.dom.style.display = 'none';
+    }
+
+    private showRelevantLabels(isModel: boolean) {
+        if (isModel) {
+            // 显示巡检点位模型相关标签
+            this.nameLabel.dom.style.display = 'grid';
+            this.typeLabel.dom.style.display = 'grid';
+            this.boundingBoxLabel.dom.style.display = 'grid';
+            this.verticesLabel.dom.style.display = 'grid';
+            this.facesLabel.dom.style.display = 'grid';
+            this.positionLabel.dom.style.display = 'grid';
+            this.rotationLabel.dom.style.display = 'grid';
+            this.scaleLabel.dom.style.display = 'grid';
+            this.droneAltitudeLabel.dom.style.display = 'grid';
+            this.cameraGimbalPitchLabel.dom.style.display = 'grid';
+            this.cameraGimbalYawLabel.dom.style.display = 'grid';
+        } else {
+            // 显示高斯模型相关标签
+            this.nameLabel.dom.style.display = 'grid';
+            this.typeLabel.dom.style.display = 'grid';
+            this.boundingBoxLabel.dom.style.display = 'grid';
+            this.verticesLabel.dom.style.display = 'grid';
+            this.facesLabel.dom.style.display = 'grid';
+            this.positionLabel.dom.style.display = 'grid';
+            this.rotationLabel.dom.style.display = 'grid';
+            this.scaleLabel.dom.style.display = 'grid';
+            // 高斯模型复用无人机标签显示GIS信息
+            this.droneAltitudeLabel.dom.style.display = 'grid';
+            this.cameraGimbalPitchLabel.dom.style.display = 'grid';
+            this.cameraGimbalYawLabel.dom.style.display = 'grid';
+        }
     }
 
     private addDragFunctionality() {
@@ -769,9 +905,165 @@ class PropertiesPanel extends Container {
 
     // 清空无人机飞控标签
     private clearDroneLabels() {
-        this.droneAltitudeLabel.dom.setAttribute('data-value', '-');
-        this.cameraGimbalPitchLabel.dom.setAttribute('data-value', '-');
-        this.cameraGimbalYawLabel.dom.setAttribute('data-value', '-');
+        // 清除data-value属性
+        this.droneAltitudeLabel.dom.setAttribute('data-value', '');
+        this.cameraGimbalPitchLabel.dom.setAttribute('data-value', '');
+        this.cameraGimbalYawLabel.dom.setAttribute('data-value', '');
+
+        // 清除text属性
+        this.droneAltitudeLabel.text = '';
+        this.cameraGimbalPitchLabel.text = '';
+        this.cameraGimbalYawLabel.text = '';
+    }
+
+    // 巡检点位模型专用信息更新
+    private updateInspectionModelInfo(model: GltfModel) {
+        if (!model.entity || !model.entity.enabled) {
+            this.clearDroneLabels();
+            return;
+        }
+
+        try {
+            const entity = model.entity;
+            const pos = entity.getPosition();
+            const rot = entity.getRotation();
+
+            // 获取欧拉角 (以度为单位)
+            const euler = rot.getEulerAngles();
+
+            // 巡检点位专用参数计算
+            // 高度信息 - 使用Y坐标作为高度
+            const height = pos.y;
+
+            // 云台俯仰 - 使用X轴旋转角度，限制在-90°到90°范围内
+            const gimbalPitch = this.clampPitchAngle(euler.x);
+
+            // 云台朝向 - 使用Y轴旋转角度，标准化到-180°到180°范围内
+            const gimbalYaw = this.normalizeAngle(-euler.y);
+
+            // 为巡检模型动态更新标签名称
+            this.droneAltitudeLabel.dom.setAttribute('data-label', '巡检高度');
+            this.cameraGimbalPitchLabel.dom.setAttribute('data-label', '相机俯仰角');
+            this.cameraGimbalYawLabel.dom.setAttribute('data-label', '相机方位角');
+
+            // 更新标签显示巡检点位专用信息
+            this.droneAltitudeLabel.dom.setAttribute('data-value', `${height.toFixed(3)}m`);
+            this.cameraGimbalPitchLabel.dom.setAttribute('data-value', `${gimbalPitch.toFixed(1)}°`);
+            this.cameraGimbalYawLabel.dom.setAttribute('data-value', `${gimbalYaw.toFixed(1)}°`);
+
+            // 为巡检模型显示实际的几何和变换信息
+            this.updateInspectionGeometryInfo(model);
+            this.updateInspectionTransformInfo(model);
+
+            // 显示所有容器
+            this.basicInfoContainer.hidden = false;
+            this.geometryContainer.hidden = false;
+            this.transformContainer.hidden = false;
+            this.droneInfoContainer.hidden = false;
+
+        } catch (error) {
+            console.warn('计算巡检点位参数时出错:', error);
+            this.clearDroneLabels();
+        }
+    }
+
+    // 巡检模型几何信息更新
+    private updateInspectionGeometryInfo(model: GltfModel) {
+        try {
+            // 为巡检模型动态更新几何信息标签名称
+            this.boundingBoxLabel.dom.setAttribute('data-label', '模型尺寸');
+            this.verticesLabel.dom.setAttribute('data-label', '顶点数量');
+            this.facesLabel.dom.setAttribute('data-label', '面片数量');
+
+            // 获取模型的包围盒信息
+            const entity = model.entity;
+            if (entity && entity.render && entity.render.meshInstances.length > 0) {
+                // 计算所有网格实例的聚合包围盒
+                let minX = Infinity, minY = Infinity, minZ = Infinity;
+                let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+
+                entity.render.meshInstances.forEach((meshInstance: any) => {
+                    const aabb = meshInstance.aabb;
+                    if (aabb) {
+                        minX = Math.min(minX, aabb.min.x);
+                        minY = Math.min(minY, aabb.min.y);
+                        minZ = Math.min(minZ, aabb.min.z);
+                        maxX = Math.max(maxX, aabb.max.x);
+                        maxY = Math.max(maxY, aabb.max.y);
+                        maxZ = Math.max(maxZ, aabb.max.z);
+                    }
+                });
+
+                if (isFinite(minX)) {
+                    const width = maxX - minX;
+                    const height = maxY - minY;
+                    const depth = maxZ - minZ;
+                    this.boundingBoxLabel.dom.setAttribute('data-value',
+                        `${width.toFixed(3)} × ${height.toFixed(3)} × ${depth.toFixed(3)}m`);
+                } else {
+                    this.boundingBoxLabel.dom.setAttribute('data-value', '无法计算');
+                }
+
+                // 计算顶点数和面数
+                let totalVertices = 0;
+                let totalFaces = 0;
+                this.countMeshData(entity, (vertices: number, faces: number) => {
+                    totalVertices += vertices;
+                    totalFaces += faces;
+                });
+
+                this.verticesLabel.dom.setAttribute('data-value', totalVertices.toLocaleString());
+                this.facesLabel.dom.setAttribute('data-value', totalFaces.toLocaleString());
+            } else {
+                this.boundingBoxLabel.dom.setAttribute('data-value', '无几何数据');
+                this.verticesLabel.dom.setAttribute('data-value', '0');
+                this.facesLabel.dom.setAttribute('data-value', '0');
+            }
+        } catch (error) {
+            console.warn('更新巡检模型几何信息时出错:', error);
+            this.boundingBoxLabel.dom.setAttribute('data-value', '计算错误');
+            this.verticesLabel.dom.setAttribute('data-value', '-');
+            this.facesLabel.dom.setAttribute('data-value', '-');
+        }
+    }
+
+    // 巡检模型变换信息更新
+    private updateInspectionTransformInfo(model: GltfModel) {
+        try {
+            // 为巡检模型动态更新变换信息标签名称
+            this.positionLabel.dom.setAttribute('data-label', '世界坐标');
+            this.rotationLabel.dom.setAttribute('data-label', '旋转角度');
+            this.scaleLabel.dom.setAttribute('data-label', '缩放比例');
+
+            const entity = model.entity;
+            if (entity) {
+                const pos = entity.getPosition();
+                const rot = entity.getRotation();
+                const scale = entity.getLocalScale();
+
+                // 位置信息
+                this.positionLabel.dom.setAttribute('data-value',
+                    `X: ${pos.x.toFixed(3)}, Y: ${pos.y.toFixed(3)}, Z: ${pos.z.toFixed(3)}`);
+
+                // 旋转信息 (转换为欧拉角)
+                const euler = rot.getEulerAngles();
+                this.rotationLabel.dom.setAttribute('data-value',
+                    `X: ${euler.x.toFixed(1)}°, Y: ${euler.y.toFixed(1)}°, Z: ${euler.z.toFixed(1)}°`);
+
+                // 缩放信息
+                this.scaleLabel.dom.setAttribute('data-value',
+                    `X: ${scale.x.toFixed(3)}, Y: ${scale.y.toFixed(3)}, Z: ${scale.z.toFixed(3)}`);
+            } else {
+                this.positionLabel.dom.setAttribute('data-value', '无变换数据');
+                this.rotationLabel.dom.setAttribute('data-value', '无变换数据');
+                this.scaleLabel.dom.setAttribute('data-value', '无变换数据');
+            }
+        } catch (error) {
+            console.warn('更新巡检模型变换信息时出错:', error);
+            this.positionLabel.dom.setAttribute('data-value', '计算错误');
+            this.rotationLabel.dom.setAttribute('data-value', '计算错误');
+            this.scaleLabel.dom.setAttribute('data-value', '计算错误');
+        }
     }
 
     // 高斯泼溅模型几何信息更新
@@ -855,10 +1147,10 @@ class PropertiesPanel extends Container {
             // 更新显示标签 (复用无人机信息标签)
             this.droneAltitudeLabel.dom.setAttribute('data-value', `${altitude.toFixed(3)}m`);
             this.droneAltitudeLabel.dom.setAttribute('data-label', '海拔高度');
-            
+
             this.cameraGimbalPitchLabel.dom.setAttribute('data-value', `(${longitude.toFixed(6)}, ${latitude.toFixed(6)})`);
             this.cameraGimbalPitchLabel.dom.setAttribute('data-label', '地理坐标');
-            
+
             this.cameraGimbalYawLabel.dom.setAttribute('data-value', `${heading.toFixed(1)}°`);
             this.cameraGimbalYawLabel.dom.setAttribute('data-label', '模型朝向');
 
