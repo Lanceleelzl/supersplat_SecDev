@@ -1139,10 +1139,17 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     // 添加到巡检点位
                     inspectionPoint.models.push(newModel as GltfModel);
 
+                    // 先清空当前选择，避免相机跳转
+                    events.fire('selection', null);
+
                     // 添加到场景（会自动触发 scene.elementAdded 事件）
                     scene.add(newModel);
 
+                    // 强制刷新场景
+                    scene.forceRender = true;
+
                     console.log(`在巡检点位 ${pointName} 中复制模型，新名称: ${newMarkerName}`);
+                    console.log('巡检模型原位复制完成，保持当前相机视角');
                 }
             } catch (error) {
                 console.error('复制巡检模型失败:', error);

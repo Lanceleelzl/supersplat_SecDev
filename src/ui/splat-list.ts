@@ -9,6 +9,8 @@ import collapseSvg from './svg/collapse.svg';
 import deleteSvg from './svg/delete.svg';
 import hiddenSvg from './svg/hidden.svg';
 import selectDuplicateSvg from './svg/select-duplicate.svg';
+import selectedSvg from './svg/selected.svg';
+import selectedNoSvg from './svg/selected_NO.svg';
 import shownSvg from './svg/shown.svg';
 
 const createSvg = (svgString: string) => {
@@ -289,6 +291,8 @@ class SplatItem extends Container {
     setSelected: (value: boolean) => void;
     getVisible: () => boolean;
     setVisible: (value: boolean) => void;
+    getSelectable: () => boolean;
+    setSelectable: (value: boolean) => void;
     destroy: () => void;
 
     constructor(name: string, edit: TextInput, args = {}) {
@@ -326,9 +330,24 @@ class SplatItem extends Container {
             class: 'splat-item-delete'
         });
 
+        const selectable = new PcuiElement({
+            dom: createSvg(selectedSvg),
+            class: 'splat-item-selectable'
+        });
+        selectable.dom.title = '可选中';
+
+        const unselectable = new PcuiElement({
+            dom: createSvg(selectedNoSvg),
+            class: 'splat-item-selectable',
+            hidden: true
+        });
+        unselectable.dom.title = '不可选中';
+
         this.append(text);
         this.append(visible);
         this.append(invisible);
+        this.append(selectable);
+        this.append(unselectable);
         this.append(duplicate);
         this.append(remove);
 
@@ -374,10 +393,34 @@ class SplatItem extends Container {
             }
         };
 
+        this.getSelectable = () => {
+            return this.class.contains('selectable');
+        };
+
+        this.setSelectable = (value: boolean) => {
+            if (value !== this.selectable) {
+                selectable.hidden = !value;
+                unselectable.hidden = value;
+                if (value) {
+                    this.class.add('selectable');
+                    this.emit('selectableChanged', this, true);
+                } else {
+                    this.class.remove('selectable');
+                    this.emit('selectableChanged', this, false);
+                }
+            }
+        };
+
         const toggleVisible = (event: MouseEvent) => {
             event.stopPropagation();
             event.preventDefault();
             this.visible = !this.visible;
+        };
+
+        const toggleSelectable = (event: MouseEvent) => {
+            event.stopPropagation();
+            event.preventDefault();
+            this.selectable = !this.selectable;
         };
 
         const handleDuplicate = (event: MouseEvent) => {
@@ -414,6 +457,8 @@ class SplatItem extends Container {
         // handle clicks
         visible.dom.addEventListener('click', toggleVisible);
         invisible.dom.addEventListener('click', toggleVisible);
+        selectable.dom.addEventListener('click', toggleSelectable);
+        unselectable.dom.addEventListener('click', toggleSelectable);
         duplicate.dom.addEventListener('click', handleDuplicate);
         remove.dom.addEventListener('click', handleRemove);
 
@@ -422,6 +467,7 @@ class SplatItem extends Container {
             // 如果点击的是按钮，就不处理选择
             const target = event.target as HTMLElement;
             if (target.closest('.splat-item-visible') ||
+                target.closest('.splat-item-selectable') ||
                 target.closest('.splat-item-duplicate') ||
                 target.closest('.splat-item-delete')) {
                 return;
@@ -436,6 +482,8 @@ class SplatItem extends Container {
         this.destroy = () => {
             visible.dom.removeEventListener('click', toggleVisible);
             invisible.dom.removeEventListener('click', toggleVisible);
+            selectable.dom.removeEventListener('click', toggleSelectable);
+            unselectable.dom.removeEventListener('click', toggleSelectable);
             duplicate.dom.removeEventListener('click', handleDuplicate);
             remove.dom.removeEventListener('click', handleRemove);
             this.dom.removeEventListener('click', handleItemClick);
@@ -464,6 +512,14 @@ class SplatItem extends Container {
 
     get visible() {
         return this.getVisible();
+    }
+
+    set selectable(value) {
+        this.setSelectable(value);
+    }
+
+    get selectable() {
+        return this.getSelectable();
     }
 }
 
@@ -521,6 +577,9 @@ class SplatList extends Container {
                 });
                 item.on('invisible', () => {
                     splat.visible = false;
+                });
+                item.on('selectableChanged', (item: SplatItem, selectable: boolean) => {
+                    splat.selectable = selectable;
                 });
                 item.on('duplicateClicked', () => {
                     // Splat模型暂不支持复制功能，可在后续版本中实现
@@ -602,6 +661,10 @@ class SplatList extends Container {
                         if (model.entity) {
                             model.visible = false;
                         }
+                    });
+
+                    currentItem.on('selectableChanged', (item: SplatItem, selectable: boolean) => {
+                        model.selectable = selectable;
                     });
 
                     currentItem.on('duplicateClicked', () => {

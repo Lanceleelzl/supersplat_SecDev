@@ -17,7 +17,13 @@ const registerSelectionEvents = (events: Events, scene: Scene) => {
             isVisible = (element as GltfModel).entity?.enabled !== false;
         }
 
-        if (element !== selection && (!element || isVisible)) {
+        // 检查元素是否可选中
+        let isSelectable = true;
+        if (element) {
+            isSelectable = element.selectable;
+        }
+
+        if (element !== selection && (!element || (isVisible && isSelectable))) {
             const prev = selection;
             selection = element;
             events.fire('selection.changed', selection, prev);

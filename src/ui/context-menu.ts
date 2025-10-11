@@ -279,8 +279,18 @@ class ContextMenu extends Container {
         try {
             console.log('触发GLB模型复制事件:', model.filename);
 
-            // 触发复制事件，编辑器会处理具体的复制逻辑
-            this.events.fire('model.duplicate', model);
+            // 检查是否是巡检模型
+            const isInspectionModel = (model as any).isInspectionModel;
+            const inspectionPointName = (model as any).inspectionPointName;
+
+            if (isInspectionModel && inspectionPointName) {
+                // 巡检模型复制 - 使用与场景列表一致的事件
+                console.log('巡检模型右键复制，点位:', inspectionPointName);
+                this.events.fire('inspection.duplicateModel', inspectionPointName, model);
+            } else {
+                // 普通GLB模型复制
+                this.events.fire('model.duplicate', model);
+            }
 
         } catch (error) {
             console.error('复制GLB模型失败:', error);

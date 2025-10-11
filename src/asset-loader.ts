@@ -272,11 +272,17 @@ class AssetLoader {
                                 // Get scene from the element
                                 const scene = element.scene;
                                 if (scene && scene.camera) {
-                                    scene.camera.focus({
-                                        focalPoint: bound.center,
-                                        radius: bound.halfExtents.length(),
-                                        speed: 1
-                                    });
+                                    // 检查是否为巡检模型，如果是则不自动聚焦
+                                    const isInspectionModel = (gltfModel as any).isInspectionModel;
+                                    if (!isInspectionModel) {
+                                        scene.camera.focus({
+                                            focalPoint: bound.center,
+                                            radius: bound.halfExtents.length(),
+                                            speed: 1
+                                        });
+                                    } else {
+                                        console.log('巡检模型不自动聚焦相机，保持当前视角');
+                                    }
                                 }
                             }
                         });
