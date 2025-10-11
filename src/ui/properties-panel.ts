@@ -300,6 +300,12 @@ class PropertiesPanel extends Container {
         // 监听相机焦点拾取事件（这个事件在每次点击时都会触发，包括点击同一个模型或高斯泼溅）
         this.events.on('camera.focalPointPicked', (details: { splat?: any, model?: GltfModel }) => {
             if (details.model && details.model.type === ElementType.model) {
+                // 检查模型是否可选择，不可选择的模型不显示属性面板
+                if (!details.model.selectable) {
+                    console.log('模型不可选择，跳过属性面板显示:', details.model.filename);
+                    return;
+                }
+                
                 // 如果面板隐藏了，重新显示
                 if (this.hidden) {
                     this.currentModel = details.model;
@@ -308,6 +314,12 @@ class PropertiesPanel extends Container {
                     this.showModelProperties(details.model);
                 }
             } else if (details.splat && details.splat.type === ElementType.splat) {
+                // 检查高斯泼溅是否可选择，不可选择的不显示属性面板
+                if (!details.splat.selectable) {
+                    console.log('高斯泼溅不可选择，跳过属性面板显示:', details.splat.name);
+                    return;
+                }
+                
                 // 如果面板隐藏了，重新显示
                 if (this.hidden) {
                     this.currentSplat = details.splat;
