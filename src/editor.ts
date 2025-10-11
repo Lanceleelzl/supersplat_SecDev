@@ -1218,39 +1218,80 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         }
     });
 
-    // 导出所有巡检点位的相机参数
+    // 导出所有巡检点位的参数 - 显示导出面板
     events.on('inspection.exportParams', () => {
+        events.fire('inspection.showExportPanel');
+    });
+
+    // 执行实际的导出操作
+    events.on('inspection.doExport', (exportOptions: any) => {
         const allParams: any[] = [];
 
+        // 只处理场景列表中的巡检点位模型
         for (const [pointName, inspectionPoint] of inspectionPoints) {
-            const pointData = {
-                pointName,
-                position: inspectionPoint.position,
-                models: inspectionPoint.models.map(model => ({
-                    markerName: (model as any).inspectionMarkerName,
-                    filename: model.filename,
-                    position: model.entity?.getPosition(),
-                    rotation: model.entity?.getRotation(),
-                    scale: model.entity?.getLocalScale(),
-                    cameraParams: (model as any).cameraParams || null
-                }))
-            };
-            allParams.push(pointData);
+            // 为每个巡检点位收集数据
+            for (let i = 0; i < inspectionPoint.models.length; i++) {
+                const model = inspectionPoint.models[i];
+                
+                // 检查模型是否标记为巡检模型且在场景列表中
+                const isInspectionModel = (model as any).isInspectionModel;
+                const inspectionPointName = (model as any).inspectionPointName;
+                
+                // 只导出标记为巡检模型且属于场景列表巡检点位的模型
+                if (!isInspectionModel || !inspectionPointName) {
+                    continue;
+                }
+                
+                const position = model.entity?.getPosition();
+                const rotation = model.entity?.getRotation();
+                const scale = model.entity?.getLocalScale();
+                
+                const rowData: any = {};
+
+                // 根据导出选项添加数据
+                if (exportOptions.pointName) {
+                    rowData['巡检点位名称'] = pointName;
+                }
+
+                if (exportOptions.markerName) {
+                    rowData['下属编号名称'] = (model as any).inspectionMarkerName || `${pointName}-${i + 1}`;
+                }
+
+                if (position) {
+                    if (exportOptions.coordinateX) {
+                        rowData['X坐标'] = position.x.toFixed(3);
+                    }
+                    if (exportOptions.coordinateY) {
+                        rowData['Y坐标'] = position.y.toFixed(3);
+                    }
+                    if (exportOptions.coordinateZ) {
+                        rowData['Z坐标'] = position.z.toFixed(3);
+                    }
+                }
+
+                if (exportOptions.height && position) {
+                    rowData['高度'] = position.y.toFixed(3);
+                }
+
+                if (rotation) {
+                    // 将四元数转换为欧拉角（度）
+                    const euler = rotation.getEulerAngles();
+                    if (exportOptions.gimbalPitch) {
+                        rowData['云台俯仰'] = euler.x.toFixed(2);
+                    }
+                    if (exportOptions.gimbalYaw) {
+                        rowData['云台方向'] = euler.y.toFixed(2);
+                    }
+                }
+
+                allParams.push(rowData);
+            }
         }
 
-        // 创建JSON文件并下载
-        const jsonData = JSON.stringify(allParams, null, 2);
-        const blob = new Blob([jsonData], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `inspection_points_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        // 触发Excel导出事件
+        events.fire('inspection.exportToExcel', allParams);
 
-        console.log('导出巡检点位参数:', allParams);
+        console.log('导出场景列表巡检点位参数:', allParams);
     });
 };
 

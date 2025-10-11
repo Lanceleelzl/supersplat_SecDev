@@ -131,14 +131,18 @@ class PropertiesPanel extends Container {
         });
 
         this.nameLabel = new Label({
-            text: '名称: -',
+            text: '',
             class: 'properties-info-label'
         });
+        this.nameLabel.dom.setAttribute('data-label', '名称');
+        this.nameLabel.dom.setAttribute('data-value', '-');
 
         this.typeLabel = new Label({
-            text: '类型: -',
+            text: '',
             class: 'properties-info-label'
         });
+        this.typeLabel.dom.setAttribute('data-label', '类型');
+        this.typeLabel.dom.setAttribute('data-value', '-');
 
         // 将基本信息标签添加到容器
         this.basicInfoContainer.append(this.nameLabel);
@@ -155,19 +159,25 @@ class PropertiesPanel extends Container {
         });
 
         this.boundingBoxLabel = new Label({
-            text: '包围盒: -',
+            text: '',
             class: 'properties-info-label'
         });
+        this.boundingBoxLabel.dom.setAttribute('data-label', '包围盒');
+        this.boundingBoxLabel.dom.setAttribute('data-value', '-');
 
         this.verticesLabel = new Label({
-            text: '顶点数: -',
+            text: '',
             class: 'properties-info-label'
         });
+        this.verticesLabel.dom.setAttribute('data-label', '顶点数');
+        this.verticesLabel.dom.setAttribute('data-value', '-');
 
         this.facesLabel = new Label({
-            text: '面数: -',
+            text: '',
             class: 'properties-info-label'
         });
+        this.facesLabel.dom.setAttribute('data-label', '面数');
+        this.facesLabel.dom.setAttribute('data-value', '-');
 
         // 将几何信息标签添加到容器
         this.geometryContainer.append(this.boundingBoxLabel);
@@ -185,19 +195,25 @@ class PropertiesPanel extends Container {
         });
 
         this.positionLabel = new Label({
-            text: '位置: -',
+            text: '',
             class: 'properties-info-label'
         });
+        this.positionLabel.dom.setAttribute('data-label', '位置');
+        this.positionLabel.dom.setAttribute('data-value', '-');
 
         this.rotationLabel = new Label({
-            text: '旋转: -',
+            text: '',
             class: 'properties-info-label'
         });
+        this.rotationLabel.dom.setAttribute('data-label', '旋转');
+        this.rotationLabel.dom.setAttribute('data-value', '-');
 
         this.scaleLabel = new Label({
-            text: '缩放: -',
+            text: '',
             class: 'properties-info-label'
         });
+        this.scaleLabel.dom.setAttribute('data-label', '缩放');
+        this.scaleLabel.dom.setAttribute('data-value', '-');
 
         // 将变换信息标签添加到容器
         this.transformContainer.append(this.positionLabel);
@@ -216,20 +232,26 @@ class PropertiesPanel extends Container {
 
         // 无人机信息
         this.droneAltitudeLabel = new Label({
-            text: '高度(Altitude): -',
+            text: '',
             class: 'properties-info-label'
         });
+        this.droneAltitudeLabel.dom.setAttribute('data-label', '高度(Altitude)');
+        this.droneAltitudeLabel.dom.setAttribute('data-value', '-');
 
         // 相机云台信息
         this.cameraGimbalPitchLabel = new Label({
-            text: '云台俯仰: -',
+            text: '',
             class: 'properties-info-label'
         });
+        this.cameraGimbalPitchLabel.dom.setAttribute('data-label', '云台俯仰');
+        this.cameraGimbalPitchLabel.dom.setAttribute('data-value', '-');
 
         this.cameraGimbalYawLabel = new Label({
-            text: '云台方向: -',
+            text: '',
             class: 'properties-info-label'
         });
+        this.cameraGimbalYawLabel.dom.setAttribute('data-label', '云台方向');
+        this.cameraGimbalYawLabel.dom.setAttribute('data-value', '-');
 
         // 将无人机信息标签添加到容器
         this.droneInfoContainer.append(this.droneAltitudeLabel);
@@ -390,8 +412,8 @@ class PropertiesPanel extends Container {
 
         try {
             // 基本信息
-            this.nameLabel.text = `名称: ${model.filename || '未知'}`;
-            this.typeLabel.text = '类型: GLB/glTF 模型';
+            this.nameLabel.dom.setAttribute('data-value', model.filename || '未知');
+            this.typeLabel.dom.setAttribute('data-value', 'GLB/glTF 模型');
 
             // 几何信息
             this.updateGeometryInfo(model);
@@ -448,9 +470,9 @@ class PropertiesPanel extends Container {
             const bound = model.worldBound;
             if (bound) {
                 const size = new Vec3().copy(bound.halfExtents).mulScalar(2);
-                this.boundingBoxLabel.text = `包围盒: ${size.x.toFixed(2)} × ${size.y.toFixed(2)} × ${size.z.toFixed(2)}`;
+                this.boundingBoxLabel.dom.setAttribute('data-value', `${size.x.toFixed(2)} × ${size.y.toFixed(2)} × ${size.z.toFixed(2)}`);
             } else {
-                this.boundingBoxLabel.text = '包围盒: 无法计算';
+                this.boundingBoxLabel.dom.setAttribute('data-value', '无法计算');
             }
 
             // 统计顶点和面数
@@ -464,21 +486,21 @@ class PropertiesPanel extends Container {
                 });
             }
 
-            this.verticesLabel.text = `顶点数: ${totalVertices.toLocaleString()}`;
-            this.facesLabel.text = `面数: ${totalFaces.toLocaleString()}`;
+            this.verticesLabel.dom.setAttribute('data-value', totalVertices.toLocaleString());
+            this.facesLabel.dom.setAttribute('data-value', totalFaces.toLocaleString());
         } catch (error) {
             // 如果计算几何信息时出错，显示错误状态
-            this.boundingBoxLabel.text = '包围盒: 计算错误';
-            this.verticesLabel.text = '顶点数: 计算错误';
-            this.facesLabel.text = '面数: 计算错误';
+            this.boundingBoxLabel.dom.setAttribute('data-value', '计算错误');
+            this.verticesLabel.dom.setAttribute('data-value', '计算错误');
+            this.facesLabel.dom.setAttribute('data-value', '计算错误');
         }
     }
 
     private updateTransformInfo(model: GltfModel) {
         if (!model.entity || !model.entity.enabled) {
-            this.positionLabel.text = '位置: -';
-            this.rotationLabel.text = '旋转: -';
-            this.scaleLabel.text = '缩放: -';
+            this.positionLabel.dom.setAttribute('data-value', '-');
+            this.rotationLabel.dom.setAttribute('data-value', '-');
+            this.scaleLabel.dom.setAttribute('data-value', '-');
             return;
         }
 
@@ -489,19 +511,19 @@ class PropertiesPanel extends Container {
             const scale = entity.getLocalScale();
 
             // 位置信息
-            this.positionLabel.text = `位置: (${pos.x.toFixed(3)}, ${pos.y.toFixed(3)}, ${pos.z.toFixed(3)})`;
+            this.positionLabel.dom.setAttribute('data-value', `(${pos.x.toFixed(3)}, ${pos.y.toFixed(3)}, ${pos.z.toFixed(3)})`);
 
             // 旋转信息 (转换为欧拉角显示)
             const euler = rot.getEulerAngles();
-            this.rotationLabel.text = `旋转: (${euler.x.toFixed(1)}°, ${euler.y.toFixed(1)}°, ${euler.z.toFixed(1)}°)`;
+            this.rotationLabel.dom.setAttribute('data-value', `(${euler.x.toFixed(1)}°, ${euler.y.toFixed(1)}°, ${euler.z.toFixed(1)}°)`);
 
             // 缩放信息
-            this.scaleLabel.text = `缩放: (${scale.x.toFixed(3)}, ${scale.y.toFixed(3)}, ${scale.z.toFixed(3)})`;
+            this.scaleLabel.dom.setAttribute('data-value', `(${scale.x.toFixed(3)}, ${scale.y.toFixed(3)}, ${scale.z.toFixed(3)})`);
         } catch (error) {
             // 如果获取变换信息时出错，显示错误状态
-            this.positionLabel.text = '位置: 获取失败';
-            this.rotationLabel.text = '旋转: 获取失败';
-            this.scaleLabel.text = '缩放: 获取失败';
+            this.positionLabel.dom.setAttribute('data-value', '获取错误');
+            this.rotationLabel.dom.setAttribute('data-value', '获取错误');
+            this.scaleLabel.dom.setAttribute('data-value', '获取错误');
         }
     }
 
@@ -538,14 +560,14 @@ class PropertiesPanel extends Container {
     }
 
     private clearLabels() {
-        this.nameLabel.text = '名称: -';
-        this.typeLabel.text = '类型: -';
-        this.boundingBoxLabel.text = '包围盒: -';
-        this.verticesLabel.text = '顶点数: -';
-        this.facesLabel.text = '面数: -';
-        this.positionLabel.text = '位置: -';
-        this.rotationLabel.text = '旋转: -';
-        this.scaleLabel.text = '缩放: -';
+        this.nameLabel.dom.setAttribute('data-value', '-');
+        this.typeLabel.dom.setAttribute('data-value', '-');
+        this.boundingBoxLabel.dom.setAttribute('data-value', '-');
+        this.verticesLabel.dom.setAttribute('data-value', '-');
+        this.facesLabel.dom.setAttribute('data-value', '-');
+        this.positionLabel.dom.setAttribute('data-value', '-');
+        this.rotationLabel.dom.setAttribute('data-value', '-');
+        this.scaleLabel.dom.setAttribute('data-value', '-');
         // 清空无人机飞控标签
         this.clearDroneLabels();
     }
@@ -718,9 +740,9 @@ class PropertiesPanel extends Container {
             const gimbalYaw = this.clampAngle(originalRoll, -180, 180);
 
             // 更新标签显示
-            this.droneAltitudeLabel.text = `高度(Altitude): ${altitude.toFixed(3)}m`;
-            this.cameraGimbalPitchLabel.text = `云台俯仰: ${gimbalPitch.toFixed(1)}°`;
-            this.cameraGimbalYawLabel.text = `云台方向: ${gimbalYaw.toFixed(1)}°`;
+            this.droneAltitudeLabel.dom.setAttribute('data-value', `${altitude.toFixed(3)}m`);
+            this.cameraGimbalPitchLabel.dom.setAttribute('data-value', `${gimbalPitch.toFixed(1)}°`);
+            this.cameraGimbalYawLabel.dom.setAttribute('data-value', `${gimbalYaw.toFixed(1)}°`);
 
         } catch (error) {
             console.warn('计算无人机飞控参数时出错:', error);
@@ -747,9 +769,9 @@ class PropertiesPanel extends Container {
 
     // 清空无人机飞控标签
     private clearDroneLabels() {
-        this.droneAltitudeLabel.text = '高度(Altitude): -';
-        this.cameraGimbalPitchLabel.text = '云台俯仰: -';
-        this.cameraGimbalYawLabel.text = '云台方向: -';
+        this.droneAltitudeLabel.dom.setAttribute('data-value', '-');
+        this.cameraGimbalPitchLabel.dom.setAttribute('data-value', '-');
+        this.cameraGimbalYawLabel.dom.setAttribute('data-value', '-');
     }
 
     // 高斯泼溅模型几何信息更新
@@ -831,9 +853,14 @@ class PropertiesPanel extends Container {
             const heading = this.normalizeAngle(-euler.y); // 航向角
 
             // 更新显示标签 (复用无人机信息标签)
-            this.droneAltitudeLabel.text = `海拔高度: ${altitude.toFixed(3)}m`;
-            this.cameraGimbalPitchLabel.text = `地理坐标: (${longitude.toFixed(6)}, ${latitude.toFixed(6)})`;
-            this.cameraGimbalYawLabel.text = `模型朝向: ${heading.toFixed(1)}°`;
+            this.droneAltitudeLabel.dom.setAttribute('data-value', `${altitude.toFixed(3)}m`);
+            this.droneAltitudeLabel.dom.setAttribute('data-label', '海拔高度');
+            
+            this.cameraGimbalPitchLabel.dom.setAttribute('data-value', `(${longitude.toFixed(6)}, ${latitude.toFixed(6)})`);
+            this.cameraGimbalPitchLabel.dom.setAttribute('data-label', '地理坐标');
+            
+            this.cameraGimbalYawLabel.dom.setAttribute('data-value', `${heading.toFixed(1)}°`);
+            this.cameraGimbalYawLabel.dom.setAttribute('data-label', '模型朝向');
 
         } catch (error) {
             console.warn('计算高斯泼溅GIS信息时出错:', error);

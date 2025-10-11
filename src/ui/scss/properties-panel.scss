@@ -22,7 +22,7 @@
     font-weight: 600;
     font-size: 13px;
     margin-bottom: 8px;
-    padding-bottom: 4px;
+    padding: 8px 12px 4px 12px;
     border-bottom: 1px solid $bcg-light;
 }
 
@@ -31,7 +31,7 @@
     font-weight: 600;
     font-size: 13px;
     margin-bottom: 8px;
-    padding: 4px 8px;
+    padding: 8px 12px;
     border-bottom: 1px solid $bcg-light;
     cursor: pointer;
     user-select: none;
@@ -50,7 +50,8 @@
 }
 
 .collapsible-content {
-    margin-left: 8px;
+    margin-left: 0px;
+    padding: 0 4px;
     transition: opacity 0.2s ease;
 }
 
@@ -59,13 +60,35 @@
     font-size: 12px;
     line-height: 1.4;
     margin-bottom: 6px;
-    padding: 4px 8px;
+    padding: 6px 12px;
     background-color: $bcg-darker;
     border-radius: 3px;
     font-family: 'Consolas', 'Monaco', 'Lucida Console', monospace;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: center;
+    min-height: 20px;
     
     &:hover {
         background-color: $bcg-light;
+    }
+    
+    // 属性名样式 - 左对齐
+    &::before {
+        content: attr(data-label);
+        text-align: left;
+        font-weight: 500;
+        color: $text-primary;
+        white-space: nowrap;
+    }
+    
+    // 属性值样式 - 右对齐
+    &::after {
+        content: attr(data-value);
+        text-align: right;
+        color: $text-secondary;
+        font-weight: normal;
     }
 }
 

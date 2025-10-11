@@ -27,6 +27,7 @@ import { ToolManager } from './tools/tool-manager';
 import { registerTransformHandlerEvents } from './transform-handler';
 import { EditorUI } from './ui/editor';
 import { SnapshotView } from './ui/snapshot-view';
+import { ExcelExporter } from './ui/excel-exporter';
 
 declare global {
     interface LaunchParams {
@@ -266,6 +267,9 @@ const main = async () => {
     registerDocEvents(scene, events);
     registerRenderEvents(scene, events);
     initShortcuts(events);
+
+    // 初始化Excel导出器
+    const excelExporter = new ExcelExporter(events);
 
     // 创建单一的快照窗口
     const snapshotView = new SnapshotView(events, scene);

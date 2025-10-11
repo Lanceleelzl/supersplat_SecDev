@@ -8,6 +8,7 @@ import { ColorPanel } from './color-panel';
 import { ContextMenu } from './context-menu';
 import { ExportPopup } from './export-popup';
 import { ImageSettingsDialog } from './image-settings-dialog';
+import { InspectionExportPanel } from './inspection-export-panel';
 import { localize, localizeInit } from './localization';
 import { Menu } from './menu';
 import { ModeToggle } from './mode-toggle';
@@ -177,6 +178,9 @@ class EditorUI {
         // export popup
         const exportPopup = new ExportPopup(events);
 
+        // inspection export panel
+        const inspectionExportPanel = new InspectionExportPanel(events);
+
         // publish settings
         const publishSettingsDialog = new PublishSettingsDialog(events);
 
@@ -191,6 +195,9 @@ class EditorUI {
         topContainer.append(publishSettingsDialog);
         topContainer.append(imageSettingsDialog);
         topContainer.append(videoSettingsDialog);
+
+        // 将巡检导出面板添加到body而不是topContainer，避免被其他元素遮挡
+        document.body.appendChild(inspectionExportPanel.dom);
 
         appContainer.append(editorContainer);
         appContainer.append(topContainer);
