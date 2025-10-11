@@ -1232,20 +1232,20 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             // 为每个巡检点位收集数据
             for (let i = 0; i < inspectionPoint.models.length; i++) {
                 const model = inspectionPoint.models[i];
-                
+
                 // 检查模型是否标记为巡检模型且在场景列表中
                 const isInspectionModel = (model as any).isInspectionModel;
                 const inspectionPointName = (model as any).inspectionPointName;
-                
+
                 // 只导出标记为巡检模型且属于场景列表巡检点位的模型
                 if (!isInspectionModel || !inspectionPointName) {
                     continue;
                 }
-                
+
                 const position = model.entity?.getPosition();
                 const rotation = model.entity?.getRotation();
                 const scale = model.entity?.getLocalScale();
-                
+
                 const rowData: any = {};
 
                 // 根据导出选项添加数据

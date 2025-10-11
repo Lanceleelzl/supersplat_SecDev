@@ -1,4 +1,5 @@
 import { Container, Label, Button, BooleanInput } from '@playcanvas/pcui';
+
 import { Events } from '../events';
 
 interface ExportOptions {
@@ -96,7 +97,7 @@ class InspectionExportPanel extends Container {
             { key: 'gimbalYaw', label: '云台方向', description: '云台方向角度（Yaw）' }
         ];
 
-        options.forEach(option => {
+        options.forEach((option) => {
             const optionContainer = new Container({
                 class: 'export-option-row'
             });
@@ -164,7 +165,7 @@ class InspectionExportPanel extends Container {
 
         // 将标题栏和内容添加到面板
         this.append(header);
-        this.append(contentContainer)
+        this.append(contentContainer);
 
         // 绑定按钮事件
         selectAllButton.on('click', () => this.selectAll(true));
@@ -230,8 +231,8 @@ class InspectionExportPanel extends Container {
             const clampedY = Math.max(0, Math.min(newY, maxY));
 
             // 更新位置
-            this.dom.style.left = clampedX + 'px';
-            this.dom.style.top = clampedY + 'px';
+            this.dom.style.left = `${clampedX}px`;
+            this.dom.style.top = `${clampedY}px`;
             this.dom.style.transform = 'none'; // 取消居中变换
 
             e.preventDefault();
@@ -256,7 +257,7 @@ class InspectionExportPanel extends Container {
     }
 
     private selectAll(value: boolean) {
-        Object.keys(this.checkboxes).forEach(key => {
+        Object.keys(this.checkboxes).forEach((key) => {
             this.checkboxes[key].value = value;
             this.exportOptions[key as keyof ExportOptions] = value;
         });
@@ -265,9 +266,9 @@ class InspectionExportPanel extends Container {
     private handleExport() {
         // 检查是否至少选择了一个选项
         const hasSelection = Object.values(this.exportOptions).some(value => value);
-        
+
         if (!hasSelection) {
-            alert('请至少选择一个导出参数！');
+            console.warn('请至少选择一个导出参数！');
             return;
         }
 
@@ -279,7 +280,7 @@ class InspectionExportPanel extends Container {
     show() {
         this.hidden = false;
         this.dom.classList.add('visible');
-        
+
         // 强制设置样式确保浮动定位
         this.dom.style.position = 'fixed';
         this.dom.style.top = '50%';
@@ -288,7 +289,7 @@ class InspectionExportPanel extends Container {
         this.dom.style.zIndex = '10000';
         this.dom.style.margin = '0';
         this.dom.style.padding = '0';
-        
+
         // 阻止背景滚动
         document.body.style.overflow = 'hidden';
     }
@@ -296,7 +297,7 @@ class InspectionExportPanel extends Container {
     hide() {
         this.hidden = true;
         this.dom.classList.remove('visible');
-        
+
         // 恢复背景滚动
         document.body.style.overflow = '';
     }

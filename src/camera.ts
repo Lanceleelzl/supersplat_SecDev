@@ -741,7 +741,7 @@ class Camera extends Element {
                 }
 
                 scene.events.fire('camera.focalPointPicked', { camera: this, model: pickedModel, position: pickedPoint });
-                
+
                 // 如果是巡检模型，也触发selection事件以保持一致性
                 if ((pickedModel as any).isInspectionModel) {
                     scene.events.fire('selection', pickedModel);
@@ -861,14 +861,14 @@ class Camera extends Element {
                     console.log('GLB模型拾取成功 - 阶段2:', pickedModel.filename);
                     console.log('是否为巡检模型:', (pickedModel as any).isInspectionModel);
                 }
-                
+
                 // 仅触发选中，不改变相机焦点（保持行为轻量）
                 scene.events.fire('camera.focalPointPicked', {
                     camera: this,
                     model: pickedModel,
                     position: pickedPoint
                 });
-                
+
                 // 如果是巡检模型，也触发selection事件以保持一致性
                 if ((pickedModel as any).isInspectionModel) {
                     scene.events.fire('selection', pickedModel);
@@ -914,7 +914,7 @@ class Camera extends Element {
                         model: best.model,
                         position: best.model.worldBound?.center.clone() || nearPoint
                     });
-                    
+
                     // 如果是巡检模型，也触发selection事件以保持一致性
                     if ((best.model as any).isInspectionModel) {
                         scene.events.fire('selection', best.model);
@@ -972,7 +972,7 @@ class Camera extends Element {
             if (Camera.debugPick) {
                 console.log('高斯模型拾取成功:', closestSplat.filename);
             }
-            
+
             this.setFocalPoint(closestP);
             this.setDistance(closestD / this.sceneRadius * this.fovFactor);
             scene.events.fire('camera.focalPointPicked', {
@@ -984,7 +984,7 @@ class Camera extends Element {
             if (Camera.debugPick) {
                 console.log('没有拾取到任何模型');
             }
-            
+
             // 点击空白区域时也触发事件，用于清空选择
             scene.events.fire('camera.focalPointPicked', {
                 camera: this,

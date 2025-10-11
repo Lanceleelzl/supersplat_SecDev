@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx';
+
 import { Events } from '../events';
 
 class ExcelExporter {
@@ -19,7 +20,7 @@ class ExcelExporter {
     private exportToExcel(data: any[]) {
         try {
             if (!data || data.length === 0) {
-                alert('没有可导出的巡检数据！');
+                console.warn('没有可导出的巡检数据！');
                 return;
             }
 
@@ -51,7 +52,7 @@ class ExcelExporter {
 
         } catch (error) {
             console.error('Excel导出失败:', error);
-            alert('Excel导出失败，请检查浏览器控制台获取详细错误信息。');
+            console.error('Excel导出失败，请检查浏览器控制台获取详细错误信息。');
         }
     }
 
@@ -65,7 +66,7 @@ class ExcelExporter {
             let maxWidth = header.length; // 表头长度
 
             // 检查数据中的最大长度
-            data.forEach(row => {
+            data.forEach((row) => {
                 const cellValue = String(row[header] || '');
                 maxWidth = Math.max(maxWidth, cellValue.length);
             });
@@ -83,15 +84,15 @@ class ExcelExporter {
         if (!data || data.length === 0) return;
 
         const headers = Object.keys(data[0]);
-        
+
         // 为表头添加样式（如果xlsx支持）
         headers.forEach((header, index) => {
             const cellAddress = XLSX.utils.encode_cell({ r: 0, c: index });
             if (worksheet[cellAddress]) {
                 worksheet[cellAddress].s = {
                     font: { bold: true },
-                    fill: { fgColor: { rgb: "EEEEEE" } },
-                    alignment: { horizontal: "center" }
+                    fill: { fgColor: { rgb: 'EEEEEE' } },
+                    alignment: { horizontal: 'center' }
                 };
             }
         });
@@ -99,7 +100,7 @@ class ExcelExporter {
 
     private showSuccessMessage(filename: string, recordCount: number) {
         const message = `
-导出成功！
+Excel导出成功！
 
 文件名：${filename}
 导出记录数：${recordCount} 条
@@ -108,7 +109,7 @@ class ExcelExporter {
 请检查下载文件夹中的Excel文件。
         `.trim();
 
-        alert(message);
+        console.log(message);
     }
 
     // 公共方法：手动触发导出（用于测试）
@@ -131,9 +132,9 @@ class ExcelExporter {
         for (let i = 1; i < data.length; i++) {
             const currentRowKeys = Object.keys(data[i]);
             if (currentRowKeys.length !== firstRowKeys.length) {
-                return { 
-                    valid: false, 
-                    message: `第${i + 1}行数据结构与第1行不一致` 
+                return {
+                    valid: false,
+                    message: `第${i + 1}行数据结构与第1行不一致`
                 };
             }
         }

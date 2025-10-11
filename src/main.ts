@@ -26,8 +26,8 @@ import { SphereSelection } from './tools/sphere-selection';
 import { ToolManager } from './tools/tool-manager';
 import { registerTransformHandlerEvents } from './transform-handler';
 import { EditorUI } from './ui/editor';
-import { SnapshotView } from './ui/snapshot-view';
 import { ExcelExporter } from './ui/excel-exporter';
+import { SnapshotView } from './ui/snapshot-view';
 
 declare global {
     interface LaunchParams {

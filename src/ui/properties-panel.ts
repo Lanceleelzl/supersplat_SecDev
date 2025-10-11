@@ -428,6 +428,10 @@ class PropertiesPanel extends Container {
         this.showRelevantLabels(true);
 
         try {
+            // 为巡检点位模型设置专用的基本信息标签名称
+            this.nameLabel.dom.setAttribute('data-label', '文件名称');
+            this.typeLabel.dom.setAttribute('data-label', '模型类型');
+
             // 基本信息
             this.nameLabel.dom.setAttribute('data-value', model.filename || '未知');
 
@@ -495,9 +499,13 @@ class PropertiesPanel extends Container {
         this.showRelevantLabels(false);
 
         try {
+            // 为高斯模型设置专用的基本信息标签名称
+            this.nameLabel.dom.setAttribute('data-label', '模型名称');
+            this.typeLabel.dom.setAttribute('data-label', '模型类型');
+
             // 基本信息
-            this.nameLabel.text = `名称: ${splat.name || splat.filename || '未知'}`;
-            this.typeLabel.text = '类型: 高斯泼溅模型 (PLY/SPLAT)';
+            this.nameLabel.text = `${splat.name || splat.filename || '未知'}`;
+            this.typeLabel.text = '高斯泼溅模型 (PLY/SPLAT)';
 
             // 几何信息 - 高斯泼溅特有信息
             this.updateSplatGeometryInfo(splat);
@@ -1069,31 +1077,41 @@ class PropertiesPanel extends Container {
     // 高斯泼溅模型几何信息更新
     private updateSplatGeometryInfo(splat: Splat) {
         try {
+            // 为高斯模型设置专用的几何信息标签名称
+            this.boundingBoxLabel.dom.setAttribute('data-label', '空间范围');
+            this.verticesLabel.dom.setAttribute('data-label', '总高斯点数');
+            this.facesLabel.dom.setAttribute('data-label', '有效点数');
+
             // 包围盒信息
             const bound = splat.worldBound;
             if (bound) {
                 const size = new Vec3().copy(bound.halfExtents).mulScalar(2);
-                this.boundingBoxLabel.text = `包围盒: ${size.x.toFixed(2)} × ${size.y.toFixed(2)} × ${size.z.toFixed(2)}`;
+                this.boundingBoxLabel.text = `${size.x.toFixed(2)} × ${size.y.toFixed(2)} × ${size.z.toFixed(2)}`;
             } else {
-                this.boundingBoxLabel.text = '包围盒: 无法计算';
+                this.boundingBoxLabel.text = '无法计算';
             }
 
             // 高斯泼溅特有信息
-            this.verticesLabel.text = `总高斯点数: ${splat.numSplats.toLocaleString()}`;
-            this.facesLabel.text = `有效点数: ${(splat.numSplats - splat.numDeleted).toLocaleString()}`;
+            this.verticesLabel.text = `${splat.numSplats.toLocaleString()}`;
+            this.facesLabel.text = `${(splat.numSplats - splat.numDeleted).toLocaleString()}`;
         } catch (error) {
-            this.boundingBoxLabel.text = '包围盒: 计算错误';
-            this.verticesLabel.text = '总高斯点数: 计算错误';
-            this.facesLabel.text = '有效点数: 计算错误';
+            this.boundingBoxLabel.text = '计算错误';
+            this.verticesLabel.text = '计算错误';
+            this.facesLabel.text = '计算错误';
         }
     }
 
     // 高斯泼溅模型变换信息更新
     private updateSplatTransformInfo(splat: Splat) {
+        // 为高斯模型设置专用的变换信息标签名称
+        this.positionLabel.dom.setAttribute('data-label', '中心位置');
+        this.rotationLabel.dom.setAttribute('data-label', '旋转状态');
+        this.scaleLabel.dom.setAttribute('data-label', '缩放系数');
+
         if (!splat.entity) {
-            this.positionLabel.text = '位置: -';
-            this.rotationLabel.text = '旋转: -';
-            this.scaleLabel.text = '缩放: -';
+            this.positionLabel.text = '-';
+            this.rotationLabel.text = '-';
+            this.scaleLabel.text = '-';
             return;
         }
 
@@ -1104,18 +1122,18 @@ class PropertiesPanel extends Container {
             const scale = entity.getLocalScale();
 
             // 位置信息
-            this.positionLabel.text = `位置: (${pos.x.toFixed(3)}, ${pos.y.toFixed(3)}, ${pos.z.toFixed(3)})`;
+            this.positionLabel.text = `(${pos.x.toFixed(3)}, ${pos.y.toFixed(3)}, ${pos.z.toFixed(3)})`;
 
             // 旋转信息 (转换为欧拉角显示)
             const euler = rot.getEulerAngles();
-            this.rotationLabel.text = `旋转: (${euler.x.toFixed(1)}°, ${euler.y.toFixed(1)}°, ${euler.z.toFixed(1)}°)`;
+            this.rotationLabel.text = `(${euler.x.toFixed(1)}°, ${euler.y.toFixed(1)}°, ${euler.z.toFixed(1)}°)`;
 
             // 缩放信息
-            this.scaleLabel.text = `缩放: (${scale.x.toFixed(3)}, ${scale.y.toFixed(3)}, ${scale.z.toFixed(3)})`;
+            this.scaleLabel.text = `(${scale.x.toFixed(3)}, ${scale.y.toFixed(3)}, ${scale.z.toFixed(3)})`;
         } catch (error) {
-            this.positionLabel.text = '位置: 获取失败';
-            this.rotationLabel.text = '旋转: 获取失败';
-            this.scaleLabel.text = '缩放: 获取失败';
+            this.positionLabel.text = '获取失败';
+            this.rotationLabel.text = '获取失败';
+            this.scaleLabel.text = '获取失败';
         }
     }
 
