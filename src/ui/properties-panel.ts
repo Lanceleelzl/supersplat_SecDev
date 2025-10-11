@@ -692,15 +692,15 @@ class PropertiesPanel extends Container {
 
             // 获取原始角度值
             const originalYaw = -euler.y; // 原偏航角
-            const originalPitch = -euler.x; // 原俯仰角
+            const originalPitch = euler.x; // 原俯仰角 (修正符号，确保Z负方向为负值)
             const originalRoll = euler.z; // 原横滚角
 
-            // 高度(Altitude) - Y坐标即为高度
-            const altitude = pos.y;
+            // 高度(Altitude) - Z坐标即为高度（修正为使用Z值）
+            const altitude = pos.z;
 
             // 根据新的要求重新分配参数：
-            // 云台俯仰角 = 原偏航角的值
-            const gimbalPitch = this.normalizeAngle(originalYaw);
+            // 云台俯仰角 = 原俯仰角的值，限制在-90°到90°范围内
+            const gimbalPitch = this.clampPitchAngle(originalPitch);
 
             // 云台方向 = 原横滚角的值
             const gimbalYaw = this.clampAngle(originalRoll, -180, 180);
@@ -726,6 +726,11 @@ class PropertiesPanel extends Container {
     // 角度限制在指定范围内
     private clampAngle(angle: number, min: number, max: number): number {
         return Math.max(min, Math.min(max, angle));
+    }
+
+    // 俯仰角限制在-90°到90°范围内
+    private clampPitchAngle(angle: number): number {
+        return Math.max(-90, Math.min(90, angle));
     }
 
     // 清空无人机飞控标签
