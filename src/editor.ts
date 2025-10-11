@@ -920,8 +920,8 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             const cameraPosition = scene.camera.entity.getPosition();
             console.log('相机位置:', cameraPosition);
 
-            // 创建巡检点位名称
-            const pointName = `巡检点位${String(inspectionPointCounter).padStart(2, '0')}`;
+            // 创建巡检点位名称 - 使用新的命名规则 XJ-1, XJ-2
+            const pointName = `XJ-${inspectionPointCounter}`;
 
             // 加载方位标模型
             const modelPath = '/model/marker.glb';
@@ -980,7 +980,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
                 // 设置模型为巡检点的子模型
                 if (model instanceof GltfModel) {
-                    const markerName = `marker${String(inspectionPointCounter).padStart(2, '0')}`;
+                    const markerName = `XJ-${inspectionPointCounter}-1`;
                     model.setCustomFilename(markerName);
                     // 标记为巡检点的子模型
                     (model as any).isInspectionModel = true;
@@ -1034,7 +1034,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
         if (inspectionPoint) {
             try {
                 // 生成新的巡检点位名称，使用当前计数
-                const newPointName = `巡检点位${String(inspectionPointCounter).padStart(2, '0')}`;
+                const newPointName = `XJ-${inspectionPointCounter}`;
                 const newModels: GltfModel[] = [];
 
                 // 复制所有模型
@@ -1063,8 +1063,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
                         // 设置属性 - 作为巡检模型（子项）
                         if (newModel instanceof GltfModel) {
-                            const newPointNumber = String(inspectionPointCounter).padStart(2, '0');
-                            const newMarkerName = `marker${newPointNumber}${i > 0 ? `-${i + 1}` : ''}`;
+                            const newMarkerName = `XJ-${inspectionPointCounter}-${i + 1}`;
 
                             newModel.setCustomFilename(newMarkerName);
                             (newModel as any).isInspectionModel = true; // 设置为子模型，不是父级
@@ -1122,12 +1121,13 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     console.log('原位复制，位置:', position.x, position.y, position.z);
 
                     // 设置属性 - 计算新的marker编号
-                    let newMarkerName = 'marker';
+                    let newMarkerName = '';
                     if (newModel instanceof GltfModel) {
                         // 获取当前巡检点下已有的marker数量
                         const existingMarkers = inspectionPoint.models.length;
-                        const pointNumber = pointName.replace('巡检点位', '');
-                        newMarkerName = `marker${pointNumber}-${existingMarkers + 1}`;
+                        // 从巡检点位名称中提取编号
+                        const pointNumber = pointName.replace('XJ-', '');
+                        newMarkerName = `XJ-${pointNumber}-${existingMarkers + 1}`;
 
                         newModel.setCustomFilename(newMarkerName);
                         (newModel as any).isInspectionModel = true;
