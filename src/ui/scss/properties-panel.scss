@@ -38,12 +38,12 @@
     transition: background-color 0.2s ease;
     border-radius: 3px;
     margin: 0 -8px 8px -8px;
-    
+
     &:hover {
         background-color: $bcg-light;
         color: $text-primary;
     }
-    
+
     &:active {
         background-color: $bcg-lighter;
     }
@@ -69,11 +69,11 @@
     gap: 12px;
     align-items: center;
     min-height: 20px;
-    
+
     &:hover {
         background-color: $bcg-light;
     }
-    
+
     // 属性名样式 - 左对齐
     &::before {
         content: attr(data-label);
@@ -82,7 +82,7 @@
         color: $text-primary;
         white-space: nowrap;
     }
-    
+
     // 属性值样式 - 右对齐
     &::after {
         content: attr(data-value);
@@ -119,26 +119,26 @@
     justify-content: center;
     width: 24px;
     height: 24px;
-    
+
     // SVG图标样式
     svg {
         width: 16px;
         height: 16px;
         transition: all 0.2s ease;
-        
+
         path {
             fill: $text-secondary;
         }
     }
-    
+
     &:hover {
         background-color: $bcg-light;
-        
+
         svg path {
             fill: $text-primary;
         }
     }
-    
+
     &:active {
         background-color: $bcg-lighter;
     }
@@ -156,7 +156,7 @@
 .properties-info-container::-webkit-scrollbar-thumb {
     background: $bcg-light;
     border-radius: 3px;
-    
+
     &:hover {
         background: $bcg-lighter;
     }
