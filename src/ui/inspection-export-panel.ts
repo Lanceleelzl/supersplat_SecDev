@@ -87,8 +87,8 @@ class InspectionExportPanel extends Container {
 
         // 创建各个选项
         const options = [
-            { key: 'pointName', label: '巡检点位名称', description: '如：XJ-1, XJ-2' },
-            { key: 'markerName', label: '下属编号名称', description: '如：XJ-1-1, XJ-1-2' },
+            { key: 'pointName', label: '巡检编号', description: '如：XJ-1, XJ-2' },
+            { key: 'markerName', label: '点位编号', description: '如：XJ-1-1, XJ-1-2' },
             { key: 'coordinateX', label: 'X坐标', description: '模型在X轴的位置坐标' },
             { key: 'coordinateY', label: 'Y坐标', description: '模型在Y轴的位置坐标' },
             { key: 'coordinateZ', label: 'Z坐标', description: '模型在Z轴的位置坐标' },

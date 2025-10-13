@@ -1250,11 +1250,11 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
                 // 根据导出选项添加数据
                 if (exportOptions.pointName) {
-                    rowData['巡检点位名称'] = pointName;
+                    rowData['巡检编号'] = pointName;
                 }
 
                 if (exportOptions.markerName) {
-                    rowData['下属编号名称'] = (model as any).inspectionMarkerName || `${pointName}-${i + 1}`;
+                    rowData['点位编号'] = (model as any).inspectionMarkerName || `${pointName}-${i + 1}`;
                 }
 
                 if (position) {
