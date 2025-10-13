@@ -458,7 +458,7 @@ class Camera extends Element {
 
         // 计算相机到场景中心的距离
         const cameraToCenter = vec.length();
-        
+
         // Use more conservative clipping planes for better compatibility with various model sizes
         if (dist > 0) {
             // 大幅扩大远裁剪面范围，支持超大规模场景和极远距离模型
@@ -487,7 +487,7 @@ class Camera extends Element {
         if (this.near >= this.far) {
             this.near = this.far / 2000;
         }
-        
+
         // 确保近裁剪面不会太小，避免深度缓冲精度问题
         this.near = Math.max(this.near, 0.001);
     }

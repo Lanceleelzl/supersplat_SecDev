@@ -307,11 +307,11 @@ class InspectionPointContainer extends Container {
     setSelectable(selectable: boolean) {
         if (this._selectable !== selectable) {
             this._selectable = selectable;
-            
+
             // 更新按钮显示状态
             this.selectableButton.hidden = !selectable;
             this.unselectableButton.hidden = selectable;
-            
+
             // 触发可选性变更事件，控制所有子级条目的可选状态
             this.emit('selectableChanged', this.pointName, selectable);
         }
@@ -684,7 +684,7 @@ class SplatList extends Container {
                                 const model = element as GltfModel;
                                 return (model as any).isInspectionModel && (model as any).inspectionPointName === pointName;
                             });
-                            
+
                             pointItems.forEach(([element, item]) => {
                                 const model = element as GltfModel;
                                 model.selectable = selectable;
