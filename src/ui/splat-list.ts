@@ -99,6 +99,10 @@ class CategoryContainer extends Container {
     get collapsed() {
         return this._collapsed;
     }
+
+    isEmpty() {
+        return this.contentContainer.dom.children.length === 0;
+    }
 }
 
 class InspectionPointContainer extends Container {
@@ -108,6 +112,9 @@ class InspectionPointContainer extends Container {
     private collapseIcon: PcuiElement;
     private pointLabel: Label;
     private pointName: string;
+    private _selectable: boolean = true;
+    private selectableButton: PcuiElement;
+    private unselectableButton: PcuiElement;
 
     constructor(pointName: string, args = {}) {
         args = {
@@ -147,6 +154,20 @@ class InspectionPointContainer extends Container {
             hidden: true
         });
 
+        // 添加可选/不可选按钮
+        this.selectableButton = new PcuiElement({
+            dom: createSvg(selectedSvg),
+            class: 'inspection-point-selectable'
+        });
+        this.selectableButton.dom.title = '可选中';
+
+        this.unselectableButton = new PcuiElement({
+            dom: createSvg(selectedNoSvg),
+            class: 'inspection-point-selectable',
+            hidden: true
+        });
+        this.unselectableButton.dom.title = '不可选中';
+
         const duplicate = new PcuiElement({
             dom: createSvg(selectDuplicateSvg),
             class: 'inspection-point-duplicate'
@@ -164,6 +185,8 @@ class InspectionPointContainer extends Container {
         this.headerElement.append(this.pointLabel);
         this.headerElement.append(visible);
         this.headerElement.append(invisible);
+        this.headerElement.append(this.selectableButton);
+        this.headerElement.append(this.unselectableButton);
         this.headerElement.append(duplicate);
         this.headerElement.append(remove);
 
@@ -200,6 +223,21 @@ class InspectionPointContainer extends Container {
             this.setVisible(true);
             visible.hidden = false;
             invisible.hidden = true;
+        });
+
+        // 绑定可选/不可选按钮事件
+        this.selectableButton.dom.addEventListener('click', (event: MouseEvent) => {
+            event.stopPropagation();
+            this.setSelectable(false);
+            this.selectableButton.hidden = true;
+            this.unselectableButton.hidden = false;
+        });
+
+        this.unselectableButton.dom.addEventListener('click', (event: MouseEvent) => {
+            event.stopPropagation();
+            this.setSelectable(true);
+            this.selectableButton.hidden = false;
+            this.unselectableButton.hidden = true;
         });
 
         duplicate.dom.addEventListener('click', (event: MouseEvent) => {
@@ -266,6 +304,23 @@ class InspectionPointContainer extends Container {
         this.emit('visibilityChanged', this.pointName, visible);
     }
 
+    setSelectable(selectable: boolean) {
+        if (this._selectable !== selectable) {
+            this._selectable = selectable;
+            
+            // 更新按钮显示状态
+            this.selectableButton.hidden = !selectable;
+            this.unselectableButton.hidden = selectable;
+            
+            // 触发可选性变更事件，控制所有子级条目的可选状态
+            this.emit('selectableChanged', this.pointName, selectable);
+        }
+    }
+
+    get selectable() {
+        return this._selectable;
+    }
+
     // 重写emit方法保持兼容性
     emit(name: string, arg0?: any, arg1?: any, arg2?: any, arg3?: any, arg4?: any, arg5?: any, arg6?: any, arg7?: any): this {
         // 调用父类的emit方法
@@ -298,7 +353,7 @@ class SplatItem extends Container {
     constructor(name: string, edit: TextInput, args = {}) {
         args = {
             ...args,
-            class: ['splat-item', 'visible']
+            class: ['splat-item', 'visible', 'selectable']
         };
 
         super(args);
@@ -620,6 +675,21 @@ class SplatList extends Container {
                         pointContainer.on('visibilityChanged', (pointName: string, visible: boolean) => {
                             console.log('巡检点位可见性变更:', pointName, visible);
                             events.fire('inspection.togglePointVisibility', pointName, visible);
+                        });
+
+                        pointContainer.on('selectableChanged', (pointName: string, selectable: boolean) => {
+                            console.log('巡检点位可选性变更:', pointName, selectable);
+                            // 设置该巡检点位下所有子模型的可选状态
+                            const pointItems = Array.from(items.entries()).filter(([element, item]) => {
+                                const model = element as GltfModel;
+                                return (model as any).isInspectionModel && (model as any).inspectionPointName === pointName;
+                            });
+                            
+                            pointItems.forEach(([element, item]) => {
+                                const model = element as GltfModel;
+                                model.selectable = selectable;
+                                item.setSelectable(selectable);
+                            });
                         });
                     }
 
