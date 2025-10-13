@@ -940,8 +940,8 @@ class PropertiesPanel extends Container {
             const euler = rot.getEulerAngles();
 
             // 巡检点位专用参数计算
-            // 高度信息 - 使用Y坐标作为高度
-            const height = pos.y;
+            // 高度信息 - 使用Z坐标作为高度
+            const height = pos.z;
 
             // 云台俯仰 - 使用X轴旋转角度，限制在-90°到90°范围内
             const gimbalPitch = this.clampPitchAngle(euler.x);

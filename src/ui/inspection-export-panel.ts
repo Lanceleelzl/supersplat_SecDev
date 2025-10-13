@@ -92,7 +92,7 @@ class InspectionExportPanel extends Container {
             { key: 'coordinateX', label: 'X坐标', description: '模型在X轴的位置坐标' },
             { key: 'coordinateY', label: 'Y坐标', description: '模型在Y轴的位置坐标' },
             { key: 'coordinateZ', label: 'Z坐标', description: '模型在Z轴的位置坐标' },
-            { key: 'height', label: '高度信息', description: '模型的Y轴坐标值' },
+            { key: 'height', label: '高度信息', description: '模型的Z轴坐标值' },
             { key: 'gimbalPitch', label: '云台俯仰', description: '云台俯仰角度（Pitch）' },
             { key: 'gimbalYaw', label: '云台方向', description: '云台方向角度（Yaw）' }
         ];

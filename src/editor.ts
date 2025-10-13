@@ -1270,7 +1270,7 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                 }
 
                 if (exportOptions.height && position) {
-                    rowData['高度'] = position.y.toFixed(3);
+                    rowData['高度'] = position.z.toFixed(3);
                 }
 
                 if (rotation) {
