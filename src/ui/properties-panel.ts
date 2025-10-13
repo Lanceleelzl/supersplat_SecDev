@@ -766,9 +766,13 @@ class PropertiesPanel extends Container {
                 const clampedX = Math.max(0, Math.min(newX, maxX));
                 const clampedY = Math.max(0, Math.min(newY, maxY));
 
+                // 只有在实际拖拽时才改变位置属性
+                // 如果面板还在初始位置（使用right定位），则改为left定位
+                if (this.dom.style.right && this.dom.style.right !== 'auto') {
+                    this.dom.style.right = 'auto';
+                }
                 this.dom.style.left = `${clampedX}px`;
                 this.dom.style.top = `${clampedY}px`;
-                this.dom.style.right = 'auto';
                 this.dom.style.bottom = 'auto';
 
                 e.preventDefault();

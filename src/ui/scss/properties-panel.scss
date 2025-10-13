@@ -3,9 +3,10 @@
 #properties-panel {
     position: absolute;
     top: 0px;
-    right: 180px;
+    right: 130px;
     width: 320px;
     z-index: 100;
+    box-sizing: border-box;
 }
 
 .collapsed #properties-panel {
