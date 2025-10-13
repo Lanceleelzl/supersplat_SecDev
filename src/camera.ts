@@ -456,29 +456,40 @@ class Camera extends Element {
         vec.sub2(bound.center, cameraPosition);
         const dist = vec.dot(forwardVec);
 
+        // 计算相机到场景中心的距离
+        const cameraToCenter = vec.length();
+        
         // Use more conservative clipping planes for better compatibility with various model sizes
         if (dist > 0) {
-            // Set far plane with some extra margin
-            this.far = Math.max(boundRadius * 4, dist + boundRadius * 2);
+            // 大幅扩大远裁剪面范围，支持超大规模场景和极远距离模型
+            this.far = Math.max(boundRadius * 2000, dist + boundRadius * 1000);
 
-            // Calculate near plane more carefully
+            // 优化近裁剪面计算，减少模型被遮挡的问题
             if (dist < boundRadius) {
                 // Camera is inside or very close to the bounding sphere
-                this.near = Math.max(0.001, boundRadius / 10000);
+                // 使用更大的近裁剪面值，避免过小导致的精度问题
+                this.near = Math.max(0.01, boundRadius / 1000);
             } else {
                 // Camera is outside the bounding sphere
-                this.near = Math.max(0.001, Math.min(dist - boundRadius, boundRadius / 100));
+                // 根据相机距离和视角动态调整近裁剪面
+                const minNear = Math.max(0.01, boundRadius / 500);
+                const dynamicNear = Math.max(minNear, (dist - boundRadius) * 0.1);
+                this.near = Math.min(dynamicNear, boundRadius / 10);
             }
         } else {
-            // Scene is behind the camera - use generous bounds
-            this.far = boundRadius * 6;
-            this.near = Math.max(0.001, boundRadius / 10000);
+            // Scene is behind the camera - use generous bounds with extended far plane
+            this.far = boundRadius * 3000;
+            // 当场景在相机后方时，使用更合理的近裁剪面
+            this.near = Math.max(0.01, Math.min(cameraToCenter * 0.01, boundRadius / 100));
         }
 
-        // Ensure near is always smaller than far
+        // Ensure near is always smaller than far with better ratio
         if (this.near >= this.far) {
-            this.near = this.far / 1000;
+            this.near = this.far / 2000;
         }
+        
+        // 确保近裁剪面不会太小，避免深度缓冲精度问题
+        this.near = Math.max(this.near, 0.001);
     }
 
     onPreRender() {
