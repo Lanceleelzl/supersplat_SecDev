@@ -504,8 +504,8 @@ class PropertiesPanel extends Container {
             this.typeLabel.dom.setAttribute('data-label', '模型类型');
 
             // 基本信息
-            this.nameLabel.text = `${splat.name || splat.filename || '未知'}`;
-            this.typeLabel.text = '高斯泼溅模型 (PLY/SPLAT)';
+            this.nameLabel.dom.setAttribute('data-value', `${splat.name || splat.filename || '未知'}`);
+            this.typeLabel.dom.setAttribute('data-value', '高斯泼溅模型 (PLY/SPLAT)');
 
             // 几何信息 - 高斯泼溅特有信息
             this.updateSplatGeometryInfo(splat);
@@ -1086,18 +1086,18 @@ class PropertiesPanel extends Container {
             const bound = splat.worldBound;
             if (bound) {
                 const size = new Vec3().copy(bound.halfExtents).mulScalar(2);
-                this.boundingBoxLabel.text = `${size.x.toFixed(2)} × ${size.y.toFixed(2)} × ${size.z.toFixed(2)}`;
+                this.boundingBoxLabel.dom.setAttribute('data-value', `${size.x.toFixed(2)} × ${size.y.toFixed(2)} × ${size.z.toFixed(2)}`);
             } else {
-                this.boundingBoxLabel.text = '无法计算';
+                this.boundingBoxLabel.dom.setAttribute('data-value', '无法计算');
             }
 
             // 高斯泼溅特有信息
-            this.verticesLabel.text = `${splat.numSplats.toLocaleString()}`;
-            this.facesLabel.text = `${(splat.numSplats - splat.numDeleted).toLocaleString()}`;
+            this.verticesLabel.dom.setAttribute('data-value', `${splat.numSplats.toLocaleString()}`);
+            this.facesLabel.dom.setAttribute('data-value', `${(splat.numSplats - splat.numDeleted).toLocaleString()}`);
         } catch (error) {
-            this.boundingBoxLabel.text = '计算错误';
-            this.verticesLabel.text = '计算错误';
-            this.facesLabel.text = '计算错误';
+            this.boundingBoxLabel.dom.setAttribute('data-value', '计算错误');
+            this.verticesLabel.dom.setAttribute('data-value', '计算错误');
+            this.facesLabel.dom.setAttribute('data-value', '计算错误');
         }
     }
 
@@ -1109,9 +1109,9 @@ class PropertiesPanel extends Container {
         this.scaleLabel.dom.setAttribute('data-label', '缩放系数');
 
         if (!splat.entity) {
-            this.positionLabel.text = '-';
-            this.rotationLabel.text = '-';
-            this.scaleLabel.text = '-';
+            this.positionLabel.dom.setAttribute('data-value', '-');
+            this.rotationLabel.dom.setAttribute('data-value', '-');
+            this.scaleLabel.dom.setAttribute('data-value', '-');
             return;
         }
 
@@ -1122,18 +1122,18 @@ class PropertiesPanel extends Container {
             const scale = entity.getLocalScale();
 
             // 位置信息
-            this.positionLabel.text = `(${pos.x.toFixed(3)}, ${pos.y.toFixed(3)}, ${pos.z.toFixed(3)})`;
+            this.positionLabel.dom.setAttribute('data-value', `(${pos.x.toFixed(3)}, ${pos.y.toFixed(3)}, ${pos.z.toFixed(3)})`);
 
             // 旋转信息 (转换为欧拉角显示)
             const euler = rot.getEulerAngles();
-            this.rotationLabel.text = `(${euler.x.toFixed(1)}°, ${euler.y.toFixed(1)}°, ${euler.z.toFixed(1)}°)`;
+            this.rotationLabel.dom.setAttribute('data-value', `(${euler.x.toFixed(1)}°, ${euler.y.toFixed(1)}°, ${euler.z.toFixed(1)}°)`);
 
             // 缩放信息
-            this.scaleLabel.text = `(${scale.x.toFixed(3)}, ${scale.y.toFixed(3)}, ${scale.z.toFixed(3)})`;
+            this.scaleLabel.dom.setAttribute('data-value', `(${scale.x.toFixed(3)}, ${scale.y.toFixed(3)}, ${scale.z.toFixed(3)})`);
         } catch (error) {
-            this.positionLabel.text = '获取失败';
-            this.rotationLabel.text = '获取失败';
-            this.scaleLabel.text = '获取失败';
+            this.positionLabel.dom.setAttribute('data-value', '获取失败');
+            this.rotationLabel.dom.setAttribute('data-value', '获取失败');
+            this.scaleLabel.dom.setAttribute('data-value', '获取失败');
         }
     }
 
