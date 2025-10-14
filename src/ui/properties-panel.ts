@@ -6,7 +6,7 @@ import { Events } from '../events';
 import { GltfModel } from '../gltf-model';
 import { Splat } from '../splat';
 import { localize } from './localization';
-import closeSvg from './svg/close.svg';
+import closeSvg from './svg/close_01.svg';
 import { Tooltips } from './tooltips';
 
 const createSvg = (svgString: string) => {
@@ -996,7 +996,7 @@ class PropertiesPanel extends Container {
 
                 entity.render.meshInstances.forEach((meshInstance: any) => {
                     const aabb = meshInstance.aabb;
-                    if (aabb) {
+                    if (aabb && aabb.min && aabb.max) {
                         minX = Math.min(minX, aabb.min.x);
                         minY = Math.min(minY, aabb.min.y);
                         minZ = Math.min(minZ, aabb.min.z);

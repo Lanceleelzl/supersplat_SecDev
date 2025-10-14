@@ -1,11 +1,16 @@
-import { Entity, Vec3, Color, LAYERID_UI, Texture, RenderTarget, PIXELFORMAT_RGBA8, ADDRESS_CLAMP_TO_EDGE, FILTER_NEAREST } from 'playcanvas';
-import { Element } from '@playcanvas/pcui';
+import { Entity, Vec3, Color, LAYERID_UI, Texture, RenderTarget, PIXELFORMAT_RGBA8, PIXELFORMAT_DEPTH, ADDRESS_CLAMP_TO_EDGE, FILTER_NEAREST, WebglGraphicsDevice } from 'playcanvas';
+import { Container, Element } from '@playcanvas/pcui';
 import { Events } from '../events';
 import { Scene } from '../scene';
 import { Camera } from '../camera';
+import closeSvg from './svg/close_01.svg';
 
-class SnapshotView {
-    element: HTMLElement;
+const createSvg = (svgString: string) => {
+    const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
+    return new DOMParser().parseFromString(decodedStr, 'image/svg+xml').documentElement;
+};
+
+class SnapshotView extends Container {
     canvas: HTMLCanvasElement;
     camera: any; // 改为简化的相机对象，不使用 Camera 类
     scene: Scene;
@@ -16,29 +21,45 @@ class SnapshotView {
     isActive = false;
     cameraControlsPanel: HTMLElement;
     private cameraParamsManager: any = null; // 相机参数管理器
+    private renderingActive = false; // 渲染状态标志
 
-    constructor(events: Events, scene: Scene) {
+    constructor(events: Events, scene: Scene, args = {}) {
+        super({
+            id: 'snapshot-panel',
+            class: 'snapshot-view',
+            ...args
+        });
+
         this.events = events;
         this.scene = scene;
         
         // 初始化相机参数管理器
         this.cameraParamsManager = this.createCameraParamsManager();
         
-        this.createElement();
+        // stop pointer events bubbling - 阻止指针事件冒泡
+        ['pointerdown', 'pointerup', 'pointermove', 'wheel', 'dblclick'].forEach((eventName) => {
+            this.dom.addEventListener(eventName, (event: Event) => event.stopPropagation());
+        });
+        
+        this.createUI();
         this.setupEventListeners();
         this.createCameraControls();
+        this.addDragFunctionality();
+        
+        // 添加clickable类
+        this.dom.classList.add('clickable');
         
         // 初始隐藏
-        this.hide();
+        this.hidden = true;
         
         // 不在构造函数中创建相机，改为懒加载模式
         // 相机将在第一次调用render方法时创建
+        
+        // 添加到body
+        document.body.appendChild(this.dom);
     }
 
-    private createElement() {
-        this.element = document.createElement('div');
-        this.element.className = 'snapshot-view hidden clickable';
-        
+    private createUI() {
         // 创建标题栏
         const titlebar = document.createElement('div');
         titlebar.className = 'snapshot-titlebar';
@@ -47,13 +68,18 @@ class SnapshotView {
         title.className = 'snapshot-title';
         title.textContent = '相机预览';
         
-        const closeBtn = document.createElement('button');
-        closeBtn.className = 'snapshot-close';
-        closeBtn.innerHTML = '×';
-        closeBtn.onclick = () => this.hide();
+        const closeBtn = new Element({
+            class: 'snapshot-close'
+        });
+        closeBtn.dom.appendChild(createSvg(closeSvg));
+        closeBtn.dom.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.closePanel();
+        });
         
         titlebar.appendChild(title);
-        titlebar.appendChild(closeBtn);
+        titlebar.appendChild(closeBtn.dom);
         
         // 创建视口
         this.canvas = document.createElement('canvas');
@@ -61,13 +87,8 @@ class SnapshotView {
         this.canvas.width = 320;
         this.canvas.height = 180;
         
-        this.element.appendChild(titlebar);
-        this.element.appendChild(this.canvas);
-        
-        document.body.appendChild(this.element);
-        
-        // 设置拖拽功能
-        this.setupDragFunctionality(titlebar);
+        this.dom.appendChild(titlebar);
+        this.dom.appendChild(this.canvas);
     }
 
     private createVirtualCamera() {
@@ -94,28 +115,35 @@ class SnapshotView {
     private createIndependentCamera() {
         // 创建完全独立的相机实体，不添加到场景层级中
         const entity = new Entity('independentSnapshotCamera');
-        entity.addComponent('camera');
+        entity.addComponent('camera', {
+            clearColorBuffer: true,
+            clearDepthBuffer: true,
+            clearColor: new Color(0.1, 0.1, 0.1, 1.0),
+            nearClip: 0.1,
+            farClip: 1000,
+            fov: 45,
+            projection: 0, // PROJECTION_PERSPECTIVE
+            priority: 0,
+            enabled: false // 默认禁用
+        });
         
-        // 设置相机为独立模式，不参与主场景渲染
-        entity.camera.enabled = false; // 默认禁用，只在需要时启用
-        entity.camera.priority = -1;   // 低优先级，避免干扰主相机
+        // 创建渲染目标
+        this.setupRenderTarget(entity);
         
-        // 重要：不添加到 app.root，保持完全独立
-        // 这样相机就不会受到 PlayCanvas 引擎的自动更新影响
-        
-        // 创建一个简化的相机包装器，不继承自 Element
-        // 这样就不会被 scene.forEachElement 影响
+        // 创建相机包装器，提供便捷的操作接口
         const camera = {
             entity: entity,
-            scene: this.scene,
-            // 手动管理相机的变换矩阵
             _position: new Vec3(0, 0, 5),
             _rotation: new Vec3(0, 0, 0),
+            _target: new Vec3(0, 0, 0),
             
-            // 添加必要的方法但不继承 Element 的 onPreRender
+            // 位置和旋转控制
             setPosition: (x: number, y: number, z: number) => {
                 camera._position.set(x, y, z);
                 entity.setPosition(x, y, z);
+            },
+            getPosition: () => {
+                return entity.getPosition().clone();
             },
             setRotation: (x: number, y: number, z: number) => {
                 camera._rotation.set(x, y, z);
@@ -128,18 +156,20 @@ class SnapshotView {
                 camera._rotation.copy(eulerAngles);
             },
             
-            // 手动激活相机进行渲染
+            // 渲染控制方法
             activateForRender: () => {
                 // 临时添加到场景中进行渲染
                 if (!entity.parent) {
                     this.scene.app.root.addChild(entity);
                 }
                 entity.camera.enabled = true;
+                entity.enabled = true;
             },
             
             // 渲染后立即移除
             deactivateAfterRender: () => {
                 entity.camera.enabled = false;
+                entity.enabled = false;
                 if (entity.parent) {
                     entity.parent.removeChild(entity);
                 }
@@ -153,6 +183,42 @@ class SnapshotView {
         this.setupIndependentCameraLayers(camera);
         
         return camera;
+    }
+
+    /**
+     * 设置渲染目标
+     */
+    private setupRenderTarget(entity: Entity) {
+        const width = this.canvas.width;
+        const height = this.canvas.height;
+        
+        // 创建纹理
+        const createTexture = (name: string, width: number, height: number, format: number) => {
+            return new Texture(this.scene.graphicsDevice, {
+                name: name,
+                width: width,
+                height: height,
+                format: format,
+                minFilter: FILTER_NEAREST,
+                magFilter: FILTER_NEAREST,
+                addressU: ADDRESS_CLAMP_TO_EDGE,
+                addressV: ADDRESS_CLAMP_TO_EDGE
+            });
+        };
+
+        // 创建渲染目标
+        const colorBuffer = createTexture('snapshotColor', width, height, PIXELFORMAT_RGBA8);
+        const depthBuffer = createTexture('snapshotDepth', width, height, PIXELFORMAT_DEPTH);
+        
+        const renderTarget = new RenderTarget({
+            colorBuffer,
+            depthBuffer,
+            flipY: false,
+            autoResolve: false
+        });
+        
+        entity.camera.renderTarget = renderTarget;
+        entity.camera.horizontalFov = width > height;
     }
 
     /**
@@ -226,66 +292,46 @@ class SnapshotView {
     }
 
     /**
+     * 同步相机参数到标记点位
+     */
+    private syncCameraWithMarkerParams() {
+        if (!this.currentMarker || !this.camera) return;
+        
+        // 从相机参数管理器获取当前标记的参数
+        const params = this.cameraParamsManager.getParams(this.currentMarker.id);
+        if (!params) return;
+        
+        // 设置相机位置和旋转
+        this.camera.setPosition(params.position.x, params.position.y, params.position.z);
+        this.camera.setRotation(params.rotation.x, params.rotation.y, params.rotation.z);
+        
+        // 如果有目标点，使用lookAt
+        if (params.target) {
+            this.camera.lookAt(new Vec3(params.target.x, params.target.y, params.target.z));
+        }
+    }
+
+    /**
      * 激活独立相机进行渲染
      */
     private activateIndependentCamera() {
-        if (!this.camera) return;
-        
-        // 使用相机包装器的激活方法
-        if (this.camera.activateForRender) {
-            this.camera.activateForRender();
+        if (!this.camera) {
+            this.camera = this.createIndependentCamera();
         }
         
-        // 确保相机参数是最新的
+        // 同步相机参数
         this.syncCameraWithMarkerParams();
+        
+        // 激活相机
+        this.camera.activateForRender();
     }
 
     /**
      * 停用独立相机
      */
     private deactivateIndependentCamera() {
-        if (!this.camera) return;
-        
-        // 使用相机包装器的停用方法
-        if (this.camera.deactivateAfterRender) {
+        if (this.camera && this.camera.deactivateAfterRender) {
             this.camera.deactivateAfterRender();
-        }
-    }
-
-    /**
-     * 同步相机参数与当前选中的巡检点位
-     */
-    private syncCameraWithMarkerParams() {
-        if (!this.currentMarker || !this.camera) return;
-        
-        const inspectionPoints = this.scene.inspectionPoints;
-        const markerData = inspectionPoints.get(this.currentMarker.name);
-        
-        if (markerData && markerData.cameraParams) {
-            const params = markerData.cameraParams;
-            
-            // 设置相机位置和目标（独立于主相机）
-            this.camera.entity.setPosition(params.position.x, params.position.y, params.position.z);
-            this.camera.entity.lookAt(params.target.x, params.target.y, params.target.z);
-            
-            // 设置相机参数
-            this.camera.entity.camera.fov = params.fov || 75;
-            this.camera.entity.camera.nearClip = params.nearClip || 0.1;
-            this.camera.entity.camera.farClip = params.farClip || 1000;
-            
-            // 设置高级相机参数（如果支持）
-            if (this.camera.entity.camera.aperture !== undefined) {
-                this.camera.entity.camera.aperture = params.aperture || 16;
-            }
-            if (this.camera.entity.camera.sensitivity !== undefined) {
-                this.camera.entity.camera.sensitivity = params.sensitivity || 1000;
-            }
-            if (this.camera.entity.camera.shutter !== undefined) {
-                this.camera.entity.camera.shutter = params.shutter || 60;
-            }
-            if (this.camera.entity.camera.toneMapping !== undefined) {
-                this.camera.entity.camera.toneMapping = params.toneMapping || 0;
-            }
         }
     }
 
@@ -384,13 +430,40 @@ class SnapshotView {
         `;
         
         this.cameraControlsPanel.innerHTML = controlsHTML;
-        this.element.appendChild(this.cameraControlsPanel);
+        this.dom.appendChild(this.cameraControlsPanel);
+        
+        // 为相机控制面板添加事件阻止，防止穿透到主场景
+        this.setupCameraControlsEventBlocking();
         
         // 绑定控制事件
         this.setupCameraControlEvents();
         
         // 设置参数管理按钮事件监听器
         this.setupParamsManagerEvents();
+    }
+
+    private setupCameraControlsEventBlocking() {
+        // 阻止相机控制面板的所有事件穿透
+        const eventTypes = ['mousedown', 'mouseup', 'mousemove', 'click', 'dblclick', 'wheel', 'contextmenu', 'pointerdown', 'pointerup', 'pointermove'];
+        
+        eventTypes.forEach(eventType => {
+            this.cameraControlsPanel.addEventListener(eventType, (event) => {
+                event.stopPropagation();
+                if (eventType === 'wheel' || eventType === 'contextmenu') {
+                    event.preventDefault();
+                }
+            }, true);
+        });
+        
+        // 为所有输入控件添加额外的事件阻止
+        const inputs = this.cameraControlsPanel.querySelectorAll('input, select, button');
+        inputs.forEach(input => {
+            eventTypes.forEach(eventType => {
+                input.addEventListener(eventType, (event) => {
+                    event.stopPropagation();
+                }, true);
+            });
+        });
     }
 
     // 设置参数管理按钮事件监听器
@@ -665,49 +738,134 @@ class SnapshotView {
                 this.syncIndependentCameraParams(params);
                 console.log('已复制主相机参数到独立相机');
                 return params;
+            },
+            
+            // 获取指定标记的相机参数
+            getParams: (markerId: string) => {
+                if (!markerId) return null;
+                
+                const inspectionPoints = this.scene.inspectionPoints;
+                const markerData = inspectionPoints.get(markerId);
+                
+                if (markerData && markerData.cameraParams) {
+                    return markerData.cameraParams;
+                }
+                
+                // 如果没有保存的参数，返回默认参数
+                return {
+                    position: { x: 0, y: 0, z: 10 },
+                    target: { x: 0, y: 0, z: 0 },
+                    rotation: { x: 0, y: 0, z: 0 },
+                    fov: 75,
+                    nearClip: 0.1,
+                    farClip: 1000,
+                    aperture: 16,
+                    sensitivity: 1000,
+                    shutter: 60,
+                    toneMapping: 0
+                };
             }
         };
     }
 
-    private setupDragFunctionality(titlebar: HTMLElement) {
-        titlebar.addEventListener('mousedown', (e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            
-            this.isDragging = true;
-            this.element.classList.add('dragging');
-            
-            const rect = this.element.getBoundingClientRect();
-            this.dragOffset.x = e.clientX - rect.left;
-            this.dragOffset.y = e.clientY - rect.top;
-        });
+    private addDragFunctionality() {
+        let isDragging = false;
+        const dragOffset = { x: 0, y: 0 };
+        let dragHandle: HTMLElement | null = null;
 
-        document.addEventListener('mousemove', (e) => {
-            if (!this.isDragging) return;
-            
-            e.stopPropagation();
-            
-            const x = e.clientX - this.dragOffset.x;
-            const y = e.clientY - this.dragOffset.y;
-            
-            this.element.style.left = `${x}px`;
-            this.element.style.top = `${y}px`;
-            this.element.style.right = 'auto';
-        });
+        // 找到面板头部作为拖拽句柄
+        const headerElements = this.dom.querySelectorAll('.snapshot-titlebar');
+        if (headerElements.length > 0) {
+            dragHandle = headerElements[0] as HTMLElement;
+            dragHandle.style.cursor = 'move';
 
-        document.addEventListener('mouseup', (e) => {
-            if (this.isDragging) {
+            const onPointerDown = (e: PointerEvent) => {
+                // 只响应左键点击
+                if (e.button !== 0) return;
+
+                // 检查点击的是否是关闭按钮，如果是则不进行拖拽
+                const target = e.target as HTMLElement;
+                if (target.closest('.snapshot-close')) {
+                    return;
+                }
+
+                isDragging = true;
+                const rect = this.dom.getBoundingClientRect();
+                dragOffset.x = e.clientX - rect.left;
+                dragOffset.y = e.clientY - rect.top;
+
+                // 设置面板为绝对定位
+                this.dom.style.position = 'absolute';
+                this.dom.style.zIndex = '1000';
+
+                // 捕获指针，确保鼠标移出元素时仍能响应事件
+                dragHandle!.setPointerCapture(e.pointerId);
+
+                e.preventDefault();
                 e.stopPropagation();
-                this.isDragging = false;
-                this.element.classList.remove('dragging');
-            }
-        });
+            };
+
+            const onPointerMove = (e: PointerEvent) => {
+                if (!isDragging) return;
+
+                const newX = e.clientX - dragOffset.x;
+                const newY = e.clientY - dragOffset.y;
+
+                // 限制拖拽范围在窗口内
+                const maxX = window.innerWidth - this.dom.offsetWidth;
+                const maxY = window.innerHeight - this.dom.offsetHeight;
+
+                const clampedX = Math.max(0, Math.min(newX, maxX));
+                const clampedY = Math.max(0, Math.min(newY, maxY));
+
+                this.dom.style.left = `${clampedX}px`;
+                this.dom.style.top = `${clampedY}px`;
+
+                e.preventDefault();
+                e.stopPropagation();
+            };
+
+            const onPointerUp = (e: PointerEvent) => {
+                if (isDragging) {
+                    isDragging = false;
+                    this.dom.style.zIndex = '100';
+
+                    // 释放指针捕获
+                    if (dragHandle!.hasPointerCapture(e.pointerId)) {
+                        dragHandle!.releasePointerCapture(e.pointerId);
+                    }
+
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            };
+
+            // 绑定事件到拖拽句柄
+            dragHandle.addEventListener('pointerdown', onPointerDown);
+            dragHandle.addEventListener('pointermove', onPointerMove);
+            dragHandle.addEventListener('pointerup', onPointerUp);
+            dragHandle.addEventListener('pointercancel', onPointerUp);
+        }
+    }
+
+    private closePanel() {
+        this.hidden = true;
+        this.isActive = false;
+        this.stopRendering();
+    }
+
+    private showPanel() {
+        this.hidden = false;
     }
 
     private setupEventListeners() {
         // 监听marker选择事件
         this.events.on('marker.selected', (marker: any) => {
-            this.setMarker(marker);
+            // 只有在快照预览激活时才处理marker选择事件
+            const snapshotPreviewEnabled = this.events.invoke('snapshot.isEnabled');
+            if (snapshotPreviewEnabled) {
+                this.setMarker(marker);
+            }
         });
 
         // 监听marker变换事件
@@ -733,12 +891,12 @@ class SnapshotView {
         const eventTypes = ['wheel', 'contextmenu'];
         
         eventTypes.forEach(eventType => {
-            this.element.addEventListener(eventType, (event) => {
+            this.dom.addEventListener(eventType, (event) => {
                 event.stopPropagation();
                 event.preventDefault();
             }, true);
         });
-        
+
         // 为canvas添加完整的事件阻止（除了拖动相关事件）
         const canvasEventTypes = ['mousedown', 'mouseup', 'mousemove', 'wheel', 'contextmenu', 'click', 'dblclick', 'pointerdown', 'pointerup', 'pointermove'];
         canvasEventTypes.forEach(eventType => {
@@ -749,21 +907,21 @@ class SnapshotView {
                 }
             }, true);
         });
-        
+
         // 添加clickable和active状态切换 - 阻止事件冒泡
-        this.element.addEventListener('mouseenter', () => {
+        this.dom.addEventListener('mouseenter', () => {
             if (!this.isActive) {
-                this.element.classList.add('clickable');
+                this.dom.classList.add('clickable');
             }
         });
 
-        this.element.addEventListener('mouseleave', () => {
-            this.element.classList.remove('clickable');
+        this.dom.addEventListener('mouseleave', () => {
+            this.dom.classList.remove('clickable');
         });
 
-        this.element.addEventListener('click', (event) => {
+        this.dom.addEventListener('click', (event) => {
             // 检查是否点击的是标题栏，如果是则不处理（让拖动功能处理）
-            const titlebar = this.element.querySelector('.snapshot-titlebar') as HTMLElement;
+            const titlebar = this.dom.querySelector('.snapshot-titlebar') as HTMLElement;
             if (titlebar && titlebar.contains(event.target as Node)) {
                 return; // 让拖动功能处理标题栏点击
             }
@@ -778,10 +936,10 @@ class SnapshotView {
         this.isActive = active;
         
         if (active) {
-            this.element.classList.add('active');
-            this.element.classList.remove('clickable');
+            this.dom.classList.add('active');
+            this.dom.classList.remove('clickable');
         } else {
-            this.element.classList.remove('active');
+            this.dom.classList.remove('active');
         }
         
         // 触发激活状态变化事件
@@ -841,19 +999,20 @@ class SnapshotView {
     }
 
     show() {
-        this.element.classList.remove('hidden');
+        this.showPanel();
         this.startRendering();
     }
 
     hide() {
-        this.element.classList.add('hidden');
-        this.setActive(false);
-        this.stopRendering();
+        this.closePanel();
     }
 
     private startRendering() {
         // 激活独立相机进行渲染
         this.activateIndependentCamera();
+        
+        // 设置渲染状态
+        this.renderingActive = true;
         
         // 开始渲染循环
         this.render();
@@ -862,13 +1021,16 @@ class SnapshotView {
     private stopRendering() {
         // 停用独立相机
         this.deactivateIndependentCamera();
+        
+        // 停止渲染状态
+        this.renderingActive = false;
     }
 
     private render() {
-        if (!this.isActive || !this.camera) return;
+        if (!this.isActive || !this.renderingActive) return;
         
         // 延迟加载相机
-        if (!this.camera.entity.camera) {
+        if (!this.camera || !this.camera.entity.camera) {
             this.camera = this.createIndependentCamera();
         }
         
@@ -879,7 +1041,7 @@ class SnapshotView {
         }
         
         try {
-            this.renderIndependentCameraPreview();
+            this.renderCameraView();
         } catch (error) {
             console.error('快照预览渲染失败:', error);
             // 降级到基础预览
@@ -890,130 +1052,137 @@ class SnapshotView {
         }
         
         // 继续渲染循环
-        requestAnimationFrame(() => this.render());
+        if (this.renderingActive) {
+            requestAnimationFrame(() => this.render());
+        }
     }
 
     /**
-     * 使用独立相机渲染预览
+     * 渲染相机视图
      */
-    private renderIndependentCameraPreview() {
+    private renderCameraView() {
         const ctx = this.canvas.getContext('2d');
-        if (!ctx) return;
-        
-        // 先显示基础预览，避免空白
-        this.renderBasicPreview(ctx);
-        
-        if (!this.camera || !this.camera.entity.camera) {
-            console.warn('Independent camera not available, showing basic preview only');
+        if (!ctx || !this.camera || !this.camera.entity.camera) {
             return;
         }
         
+        const app = this.scene.app;
         const cameraComponent = this.camera.entity.camera;
         
+        // 同步相机参数到标记点位
+        this.syncCameraWithMarkerParams();
+        
         try {
-            // 使用相机包装器的激活方法进行临时渲染
-            this.camera.activateForRender();
-            
-            // 直接使用应用程序进行渲染
-            const app = this.scene.app;
-            
-            // 保存当前主相机状态
+            // 简化渲染逻辑：直接使用主相机的渲染结果
             const mainCamera = this.scene.camera.entity.camera;
-            const mainCameraEnabled = mainCamera.enabled;
             
-            // 临时禁用主相机，只使用独立相机渲染
-            mainCamera.enabled = false;
+            // 保存主相机的当前状态
+            const originalPosition = this.scene.camera.entity.getPosition().clone();
+            const originalRotation = this.scene.camera.entity.getEulerAngles().clone();
             
-            // 手动触发渲染
+            // 临时设置主相机到快照相机的位置和角度
+            this.scene.camera.entity.setPosition(this.camera.entity.getPosition());
+            this.scene.camera.entity.setEulerAngles(this.camera.entity.getEulerAngles());
+            
+            // 强制渲染一帧
             app.renderNextFrame = true;
+            app.render();
             
-            // 等待多帧后读取渲染结果，确保渲染完成
+            // 从主画布复制内容到快照画布
             setTimeout(() => {
                 try {
                     // 恢复主相机状态
-                    mainCamera.enabled = mainCameraEnabled;
+                    this.scene.camera.entity.setPosition(originalPosition);
+                    this.scene.camera.entity.setEulerAngles(originalRotation);
                     
-                    // 立即停用独立相机
-                    this.camera.deactivateAfterRender();
-                    
-                    // 尝试从渲染目标读取数据
-                    if (cameraComponent.renderTarget) {
-                        console.log('尝试从渲染目标读取数据...');
-                        this.readFromRenderTarget(ctx, cameraComponent.renderTarget);
+                    // 获取主画布内容并缩放到快照画布
+                    const mainCanvas = app.graphicsDevice.canvas;
+                    if (mainCanvas) {
+                        // 清空快照画布
+                        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                        
+                        // 绘制主画布内容到快照画布
+                        ctx.drawImage(mainCanvas, 0, 0, this.canvas.width, this.canvas.height);
+                        
+                        // 添加标记信息覆盖层
+                        this.drawMarkerInfo(ctx);
                     } else {
-                        console.warn('没有渲染目标，使用基础预览');
-                        // 基础预览已经在开始时显示了
+                        this.renderBasicPreview(ctx);
                     }
                 } catch (error) {
-                    console.warn('渲染后处理失败:', error);
-                    // 基础预览已经在开始时显示了
+                    console.warn('快照渲染后处理失败:', error);
+                    this.renderBasicPreview(ctx);
                 }
-            }, 50); // 增加等待时间到50ms
+            }, 16); // 等待一帧时间
             
         } catch (error) {
-            // 确保在出错时也停用相机
-            if (this.camera.deactivateAfterRender) {
-                this.camera.deactivateAfterRender();
-            }
-            console.warn('Failed to render independent camera preview:', error);
-            // 基础预览已经在开始时显示了
+            console.warn('快照相机渲染失败:', error);
+            this.renderBasicPreview(ctx);
         }
     }
     
     /**
-     * 从渲染目标读取像素数据
+     * 从渲染目标读取像素数据到Canvas
      */
-    private readFromRenderTarget(ctx: CanvasRenderingContext2D, renderTarget: any) {
+    private readRenderTargetToCanvas(ctx: CanvasRenderingContext2D, renderTarget: RenderTarget) {
         try {
-            console.log('开始从渲染目标读取数据，renderTarget:', renderTarget);
-            
-            // 检查渲染目标是否有效
             if (!renderTarget || !renderTarget.colorBuffer) {
-                console.warn('渲染目标或颜色缓冲区无效');
+                console.warn('渲染目标无效');
                 this.renderBasicPreview(ctx);
                 return;
             }
             
+            const device = this.scene.graphicsDevice as WebglGraphicsDevice;
+            const gl = device.gl;
             const colorBuffer = renderTarget.colorBuffer;
+            
             const width = this.canvas.width;
             const height = this.canvas.height;
             
-            console.log('渲染目标尺寸:', colorBuffer.width, 'x', colorBuffer.height);
-            console.log('画布尺寸:', width, 'x', height);
-            
-            // 创建像素数据缓冲区
-            const pixelData = new Uint8Array(width * height * 4);
-            
-            // 使用PlayCanvas的colorBuffer.read方法
-            if (colorBuffer.read) {
-                console.log('使用colorBuffer.read方法读取像素数据');
-                colorBuffer.read(0, 0, width, height, { 
-                    renderTarget: renderTarget, 
-                    data: pixelData 
-                }).then(() => {
-                    console.log('成功读取像素数据，前几个像素值:', Array.from(pixelData.slice(0, 16)));
-                    
-                    // 创建ImageData并设置像素数据
-                    const imageData = ctx.createImageData(width, height);
-                    imageData.data.set(pixelData);
-                    
-                    // 将渲染结果绘制到canvas
-                    ctx.putImageData(imageData, 0, 0);
-                    
-                    // 添加标记信息覆盖层
-                    this.drawMarkerInfo(ctx);
-                    
-                    console.log('成功将渲染结果绘制到画布');
-                }).catch((error: any) => {
-                    console.warn('colorBuffer.read失败:', error);
-                    this.renderBasicPreview(ctx);
-                });
-            } else {
-                console.warn('colorBuffer不支持read方法，使用基础预览');
+            // 绑定渲染目标的帧缓冲区
+            const framebuffer = (renderTarget as any)._glFrameBuffer;
+            if (!framebuffer) {
+                console.warn('帧缓冲区不可用');
                 this.renderBasicPreview(ctx);
+                return;
             }
+            
+            // 绑定帧缓冲区并读取像素
+            gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+            
+            // 创建像素数据数组
+            const pixels = new Uint8Array(width * height * 4);
+            
+            // 读取像素数据
+            gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+            
+            // 恢复默认帧缓冲区
+            gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            
+            // 创建ImageData并绘制到Canvas
+            const imageData = new ImageData(width, height);
+            
+            // 翻转Y轴（OpenGL坐标系与Canvas坐标系不同）
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    const srcIndex = ((height - 1 - y) * width + x) * 4;
+                    const dstIndex = (y * width + x) * 4;
+                    
+                    imageData.data[dstIndex] = pixels[srcIndex];     // R
+                    imageData.data[dstIndex + 1] = pixels[srcIndex + 1]; // G
+                    imageData.data[dstIndex + 2] = pixels[srcIndex + 2]; // B
+                    imageData.data[dstIndex + 3] = pixels[srcIndex + 3]; // A
+                }
+            }
+            
+            // 绘制到Canvas
+            ctx.putImageData(imageData, 0, 0);
+            
+            // 添加标记信息覆盖层
+            this.drawMarkerInfo(ctx);
+            
         } catch (error) {
-            console.warn('从渲染目标读取数据失败:', error);
+            console.warn('读取渲染目标失败:', error);
             this.renderBasicPreview(ctx);
         }
     }
@@ -1022,15 +1191,22 @@ class SnapshotView {
      * 绘制标记信息
      */
     private drawMarkerInfo(ctx: CanvasRenderingContext2D) {
-        if (this.currentMarker) {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            ctx.fillRect(0, this.canvas.height - 30, this.canvas.width, 30);
-            
-            ctx.fillStyle = '#ffffff';
-            ctx.font = '12px Arial';
-            ctx.textAlign = 'left';
-            ctx.fillText(`标记: ${this.currentMarker.name || '未命名'}`, 10, this.canvas.height - 10);
-        }
+        if (!this.currentMarker) return;
+        
+        // 设置文字样式
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(0, this.canvas.height - 60, this.canvas.width, 60);
+        
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'left';
+        
+        // 绘制标记信息
+        const markerInfo = `标记: ${this.currentMarker.name || this.currentMarker.id}`;
+        const timestamp = new Date().toLocaleTimeString();
+        
+        ctx.fillText(markerInfo, 10, this.canvas.height - 35);
+        ctx.fillText(`时间: ${timestamp}`, 10, this.canvas.height - 15);
     }
     
     private renderBasicPreview(ctx: CanvasRenderingContext2D) {
@@ -1090,15 +1266,11 @@ class SnapshotView {
             this.camera.entity.destroy();
         }
         
-        // 从DOM中移除元素
-        if (this.element && this.element.parentNode) {
-            this.element.parentNode.removeChild(this.element);
-        }
+        // PCUI Container 会自动处理DOM清理，不需要手动移除
         
         // 清理引用
         this.camera = null;
         this.currentMarker = null;
-        this.element = null;
         this.canvas = null;
         this.cameraControlsPanel = null;
     }

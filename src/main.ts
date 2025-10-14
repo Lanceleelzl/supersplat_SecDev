@@ -290,6 +290,11 @@ const main = async () => {
     // 快照预览开关状态
     let snapshotPreviewEnabled = false;
 
+    // 添加获取快照预览状态的事件处理器
+    events.function('snapshot.isEnabled', () => {
+        return snapshotPreviewEnabled;
+    });
+
     // 监听快照预览开关切换
     events.on('snapshot.toggle', () => {
         snapshotPreviewEnabled = !snapshotPreviewEnabled;

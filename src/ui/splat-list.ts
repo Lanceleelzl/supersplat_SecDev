@@ -14,8 +14,17 @@ import selectedNoSvg from './svg/selected_NO.svg';
 import shownSvg from './svg/shown.svg';
 
 const createSvg = (svgString: string) => {
-    const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
-    return new DOMParser().parseFromString(decodedStr, 'image/svg+xml').documentElement;
+    let svgContent: string;
+    
+    // 检查是否是data URL格式
+    if (svgString.startsWith('data:image/svg+xml,')) {
+        svgContent = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
+    } else {
+        // 直接使用SVG字符串内容
+        svgContent = svgString;
+    }
+    
+    return new DOMParser().parseFromString(svgContent, 'image/svg+xml').documentElement;
 };
 
 class CategoryContainer extends Container {

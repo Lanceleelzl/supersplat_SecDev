@@ -29,6 +29,26 @@
 
     svg {
         color: $text-secondary;
+        width: 16px;
+        height: 16px;
+        min-width: 16px;
+        min-height: 16px;
+        flex-shrink: 0;
+        margin-right: 8px;
+        display: block;
+        visibility: visible;
+        opacity: 1;
+        
+        // Ensure SVG paths inherit the color
+        path {
+            fill: currentColor;
+        }
+    }
+    
+    // 当图标为空时，隐藏图标容器
+    &:has(.menu-icon:empty) svg,
+    .menu-icon:empty {
+        display: none;
     }
 
     &:hover:not(.pcui-disabled) {
@@ -41,6 +61,10 @@
 
         svg {
             color: $text-primary;
+            
+            path {
+                fill: currentColor;
+            }
         }
     }
 
@@ -51,6 +75,10 @@
 
         svg {
             color: $text-darkest;
+            
+            path {
+                fill: currentColor;
+            }
         }
     }
 
