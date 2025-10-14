@@ -271,15 +271,21 @@ const main = async () => {
     // 初始化Excel导出器
     const excelExporter = new ExcelExporter(events);
 
-    // 创建单一的快照窗口
+    // 初始化文件处理器
+    initFileHandler(scene, events, editorUI.appContainer.dom);
+
+    // 加载异步模型
+    scene.start();
+
+    // 创建单一的快照窗口（在scene启动后）
     const snapshotView = new SnapshotView(events, scene);
     editorUI.canvasContainer.append(snapshotView);
-    snapshotView.hidden = true; // 默认隐藏
+    snapshotView.hide(); // 默认隐藏
 
     // 设置固定位置
-    snapshotView.dom.style.position = 'absolute';
-    snapshotView.dom.style.left = '320px';
-    snapshotView.dom.style.top = '120px';
+    snapshotView.element.style.position = 'absolute';
+    snapshotView.element.style.left = '320px';
+    snapshotView.element.style.top = '120px';
 
     // 快照预览开关状态
     let snapshotPreviewEnabled = false;
@@ -300,8 +306,7 @@ const main = async () => {
     events.on('marker.selected', (model: any) => {
         // 只有开启快照预览时才显示窗口
         if (snapshotPreviewEnabled) {
-            snapshotView.updateMarker(model);
-            snapshotView.show();
+            snapshotView.setMarker(model);
         }
     });
 
@@ -317,12 +322,6 @@ const main = async () => {
     events.on('snapshot.close', () => {
         snapshotView.hide();
     });
-
-    // 初始化文件处理器
-    initFileHandler(scene, events, editorUI.appContainer.dom);
-
-    // 加载异步模型
-    scene.start();
 
     // 处理加载参数
     const loadList = url.searchParams.getAll('load');

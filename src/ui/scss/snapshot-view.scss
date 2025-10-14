@@ -8,11 +8,51 @@
     border: 1px solid #444;
     border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    z-index: 1000;
+    z-index: 10000; // 提高z-index确保在最顶层
     font-family: 'Inter', sans-serif;
+    pointer-events: auto; // 确保快照窗口本身可以接收事件
+    
+    // 强制阻止事件穿透
+    * {
+        pointer-events: auto;
+    }
 
     &.hidden {
         display: none;
+    }
+
+    // camera-preview样式移植 - clickable状态
+    &.clickable {
+        cursor: pointer;
+        transition: all 0.2s ease;
+        
+        &:hover {
+            border-color: #4CAF50;
+            box-shadow: 0 4px 20px rgba(76, 175, 80, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        &:active {
+            transform: translateY(0px);
+            box-shadow: 0 2px 10px rgba(76, 175, 80, 0.2);
+        }
+    }
+
+    // camera-preview样式移植 - active状态
+    &.active {
+        border-color: #4CAF50;
+        box-shadow: 0 4px 20px rgba(76, 175, 80, 0.4);
+        background: rgba(30, 30, 30, 1);
+        
+        .snapshot-titlebar {
+            background: rgba(76, 175, 80, 0.2);
+            border-bottom-color: #4CAF50;
+        }
+        
+        .snapshot-title {
+            color: #4CAF50;
+            font-weight: 600;
+        }
     }
 }
 
@@ -27,6 +67,7 @@
     border-radius: 8px 8px 0 0;
     cursor: move;
     user-select: none;
+    transition: all 0.2s ease;
 }
 
 .snapshot-title {
@@ -34,6 +75,7 @@
     font-size: 13px;
     font-weight: 500;
     margin: 0;
+    transition: all 0.2s ease;
 }
 
 .snapshot-close {
@@ -72,6 +114,65 @@
     &:hover {
         border-color: #4CAF50;
     }
+
+    // camera-preview样式移植 - 视口激活状态
+    .active & {
+        border-color: #4CAF50;
+        box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+    }
+}
+
+// 相机参数控制面板
+.camera-controls {
+    padding: 12px;
+    border-top: 1px solid #555;
+    background: rgba(20, 20, 20, 0.8);
+    border-radius: 0 0 8px 8px;
+
+    .control-group {
+        margin-bottom: 8px;
+        
+        &:last-child {
+            margin-bottom: 0;
+        }
+    }
+
+    .control-label {
+        display: block;
+        color: #ccc;
+        font-size: 11px;
+        margin-bottom: 4px;
+        font-weight: 500;
+    }
+
+    .control-input {
+        width: 100%;
+        background: rgba(40, 40, 40, 0.8);
+        border: 1px solid #555;
+        border-radius: 3px;
+        color: #fff;
+        font-size: 12px;
+        padding: 4px 6px;
+        transition: border-color 0.2s ease;
+
+        &:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+
+        &:hover {
+            border-color: #666;
+        }
+    }
+
+    .control-row {
+        display: flex;
+        gap: 8px;
+        
+        .control-input {
+            flex: 1;
+        }
+    }
 }
 
 // 响应式设计
@@ -94,10 +195,4 @@
     opacity: 0.8;
     transform: scale(0.98);
     transition: all 0.1s ease;
-}
-
-// 激活状态（选中marker时）
-.snapshot-view.active {
-    border-color: #4CAF50;
-    box-shadow: 0 4px 20px rgba(76, 175, 80, 0.2);
 }

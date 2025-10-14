@@ -28,6 +28,7 @@ class Element {
     scene: Scene = null;
     uid: number;
     selectable: boolean = true;  // 可选中状态，默认为true
+    selected: boolean = false;   // 选中状态，默认为false
 
     constructor(type: ElementType) {
         this.type = type;

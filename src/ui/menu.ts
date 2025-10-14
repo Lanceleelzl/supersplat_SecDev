@@ -259,6 +259,14 @@ class Menu extends Container {
             icon: createSvg(sceneImport),
             onSelect: () => events.fire('inspection.addPoint')
         },
+        {
+            text: '切换到选中视角',
+            icon: createSvg(selectDuplicate), // 暂时使用duplicate图标
+            onSelect: () => {
+                // 获取当前选中的巡检点位并切换相机视角
+                events.fire('camera.switchToSelectedMarker');
+            }
+        },
         this.snapshotMenuItem,
         {
             text: '导出巡检参数',
@@ -372,14 +380,9 @@ class Menu extends Container {
     }
 
     private updateSnapshotMenuText() {
-        if (this.inspectionMenuPanel) {
-            // 找到快照预览菜单项的文本元素并更新
-            // 快照预览是第二个菜单项 (索引1)
-            const menuItems = this.inspectionMenuPanel.dom.querySelectorAll('.menu-row-text');
-            if (menuItems.length > 1) {
-                const snapshotTextElement = menuItems[1] as HTMLElement;
-                snapshotTextElement.textContent = this.snapshotPreviewEnabled ? '☑ 快照预览' : '☐ 快照预览';
-            }
+        if (this.snapshotMenuItem) {
+            // 直接更新菜单项的文本
+            this.snapshotMenuItem.text = this.snapshotPreviewEnabled ? '☑ 快照预览' : '☐ 快照预览';
         }
     }
 
