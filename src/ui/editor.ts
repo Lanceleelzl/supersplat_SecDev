@@ -75,7 +75,7 @@ class EditorUI {
         // app label
         const appLabel = new Label({
             id: 'app-label',
-            text: `SUPERSPLAT v${version}`
+            text: `GeosvSecDev BY SUPERSPLAT v${version}`
         });
 
         // cursor label

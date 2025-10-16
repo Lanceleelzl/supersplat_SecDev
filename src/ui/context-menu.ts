@@ -60,12 +60,6 @@ class ContextMenu extends Container {
     private setupMenuItems() {
         this.menuItems = [
             {
-                text: '切换到此视角',
-                icon: selectDuplicateSvg, // 临时使用复制图标，后续可以替换为相机图标
-                action: () => this.switchToMarkerView(),
-                enabled: () => this.currentModel !== null && (this.currentModel as any).isInspectionModel
-            },
-            {
                 text: '原位复制',
                 icon: selectDuplicateSvg,
                 action: () => this.duplicateInPlace(),
@@ -397,21 +391,6 @@ class ContextMenu extends Container {
             }
         } catch (error) {
             console.error('显示模型失败:', error);
-        }
-    }
-
-    private switchToMarkerView() {
-        try {
-            if (this.currentModel && (this.currentModel as any).isInspectionModel) {
-                // 触发相机切换到marker视角事件
-                this.events.fire('camera.setToMarker', this.currentModel);
-                console.log('切换主相机到巡检点位视角:', (this.currentModel as any).inspectionMarkerName);
-                
-                // 隐藏菜单
-                this.hide();
-            }
-        } catch (error) {
-            console.error('切换相机视角失败:', error);
         }
     }
 }

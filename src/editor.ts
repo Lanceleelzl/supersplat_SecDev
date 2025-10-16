@@ -1352,247 +1352,39 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
             scene.forceRender = true;
         });
 
-        // 设置相机到marker视角
-        events.on('camera.setToMarker', (marker: any) => {
-            const inspectionPoints = scene.inspectionPoints;
-            const markerData = inspectionPoints.get(marker.name);
-            
-            if (markerData && markerData.cameraParams) {
-                const params = markerData.cameraParams;
-                
-                // 使用PlayCanvas CameraComponent API设置主相机
-                const mainCamera = scene.camera;
-                
-                // 设置相机位置和目标
-                mainCamera.entity.setPosition(params.position.x, params.position.y, params.position.z);
-                mainCamera.entity.lookAt(params.target.x, params.target.y, params.target.z);
-                
-                // 设置相机参数 - 参考PlayCanvas CameraComponent API
-                mainCamera.entity.camera.fov = params.fov || 75;
-                mainCamera.entity.camera.nearClip = params.nearClip || 0.1;
-                mainCamera.entity.camera.farClip = params.farClip || 1000;
-                
-                // 设置高级相机参数（如果支持）
-                if (mainCamera.entity.camera.aperture !== undefined) {
-                    mainCamera.entity.camera.aperture = params.aperture || 16;
-                }
-                if (mainCamera.entity.camera.sensitivity !== undefined) {
-                    mainCamera.entity.camera.sensitivity = params.sensitivity || 1000;
-                }
-                if (mainCamera.entity.camera.shutter !== undefined) {
-                    mainCamera.entity.camera.shutter = params.shutter || 60;
-                }
-                if (mainCamera.entity.camera.toneMapping !== undefined) {
-                    mainCamera.entity.camera.toneMapping = params.toneMapping || 0;
-                }
-                
-                // 更新相机状态
-                mainCamera.setFocalPoint(new Vec3(params.target.x, params.target.y, params.target.z));
-                
-                // 计算方位角和仰角
-                const direction = new Vec3().sub2(
-                    new Vec3(params.position.x, params.position.y, params.position.z),
-                    new Vec3(params.target.x, params.target.y, params.target.z)
-                );
-                const distance = direction.length();
-                direction.normalize();
-                
-                const azimuth = Math.atan2(direction.x, direction.z) * 180 / Math.PI;
-                const elevation = Math.asin(direction.y) * 180 / Math.PI;
-                
-                mainCamera.setAzimElev(azimuth, elevation);
-                mainCamera.setDistance(distance);
-                
-                console.log('主相机已切换到marker视角:', marker.name);
-            }
-        });
-
         // 相机FOV调整事件
         events.on('camera.fov', (fov: number) => {
-            const selectedMarker = scene.getSelectedInspectionMarker?.();
-            if (selectedMarker) {
-                const inspectionPoints = scene.inspectionPoints;
-                const markerData = inspectionPoints.get(selectedMarker.filename);
-                
-                if (markerData && markerData.cameraParams) {
-                    markerData.cameraParams.fov = fov;
-                    markerData.cameraParams.timestamp = Date.now();
-                    
-                    // 同步更新主相机
-                    scene.camera.entity.camera.fov = fov;
-                    
-                    events.fire('camera.params.updated', {
-                        marker: selectedMarker,
-                        params: markerData.cameraParams
-                    });
-                }
-            }
+            console.log('相机FOV调整功能暂未实现');
         });
 
         // 相机近远裁剪面调整事件
         events.on('camera.clip', (data: { near?: number, far?: number }) => {
-            const selectedMarker = scene.getSelectedInspectionMarker?.();
-            if (selectedMarker) {
-                const inspectionPoints = scene.inspectionPoints;
-                const markerData = inspectionPoints.get(selectedMarker.filename);
-                
-                if (markerData && markerData.cameraParams) {
-                    if (data.near !== undefined) {
-                        markerData.cameraParams.nearClip = data.near;
-                        scene.camera.entity.camera.nearClip = data.near;
-                    }
-                    if (data.far !== undefined) {
-                        markerData.cameraParams.farClip = data.far;
-                        scene.camera.entity.camera.farClip = data.far;
-                    }
-                    
-                    markerData.cameraParams.timestamp = Date.now();
-                    
-                    events.fire('camera.params.updated', {
-                        marker: selectedMarker,
-                        params: markerData.cameraParams
-                    });
-                }
-            }
+            console.log('相机近远裁剪面调整功能暂未实现');
         });
 
         // 相机光圈调整事件
         events.on('camera.aperture', (aperture: number) => {
-            const selectedMarker = scene.getSelectedInspectionMarker?.();
-            if (selectedMarker) {
-                const inspectionPoints = scene.inspectionPoints;
-                const markerData = inspectionPoints.get(selectedMarker.filename);
-                
-                if (markerData && markerData.cameraParams) {
-                    markerData.cameraParams.aperture = aperture;
-                    markerData.cameraParams.timestamp = Date.now();
-                    
-                    // 同步更新主相机（如果支持）
-                    if (scene.camera.entity.camera.aperture !== undefined) {
-                        scene.camera.entity.camera.aperture = aperture;
-                    }
-                    
-                    events.fire('camera.params.updated', {
-                        marker: selectedMarker,
-                        params: markerData.cameraParams
-                    });
-                }
-            }
+            console.log('相机光圈调整功能暂未实现');
         });
 
         // 相机感光度调整事件
         events.on('camera.sensitivity', (sensitivity: number) => {
-            const selectedMarker = scene.getSelectedInspectionMarker?.();
-            if (selectedMarker) {
-                const inspectionPoints = scene.inspectionPoints;
-                const markerData = inspectionPoints.get(selectedMarker.filename);
-                
-                if (markerData && markerData.cameraParams) {
-                    markerData.cameraParams.sensitivity = sensitivity;
-                    markerData.cameraParams.timestamp = Date.now();
-                    
-                    // 同步更新主相机（如果支持）
-                    if (scene.camera.entity.camera.sensitivity !== undefined) {
-                        scene.camera.entity.camera.sensitivity = sensitivity;
-                    }
-                    
-                    events.fire('camera.params.updated', {
-                        marker: selectedMarker,
-                        params: markerData.cameraParams
-                    });
-                }
-            }
+            console.log('相机感光度调整功能暂未实现');
         });
 
         // 相机快门调整事件
         events.on('camera.shutter', (shutter: number) => {
-            const selectedMarker = scene.getSelectedInspectionMarker?.();
-            if (selectedMarker) {
-                const inspectionPoints = scene.inspectionPoints;
-                const markerData = inspectionPoints.get(selectedMarker.filename);
-                
-                if (markerData && markerData.cameraParams) {
-                    markerData.cameraParams.shutter = shutter;
-                    markerData.cameraParams.timestamp = Date.now();
-                    
-                    // 同步更新主相机（如果支持）
-                    if (scene.camera.entity.camera.shutter !== undefined) {
-                        scene.camera.entity.camera.shutter = shutter;
-                    }
-                    
-                    events.fire('camera.params.updated', {
-                        marker: selectedMarker,
-                        params: markerData.cameraParams
-                    });
-                }
-            }
+            console.log('相机快门调整功能暂未实现');
         });
 
         // 相机色调映射调整事件
         events.on('camera.toneMapping', (toneMapping: number) => {
-            const selectedMarker = scene.getSelectedInspectionMarker?.();
-            if (selectedMarker) {
-                const inspectionPoints = scene.inspectionPoints;
-                const markerData = inspectionPoints.get(selectedMarker.filename);
-                
-                if (markerData && markerData.cameraParams) {
-                    markerData.cameraParams.toneMapping = toneMapping;
-                    markerData.cameraParams.timestamp = Date.now();
-                    
-                    // 同步更新主相机（如果支持）
-                    if (scene.camera.entity.camera.toneMapping !== undefined) {
-                        scene.camera.entity.camera.toneMapping = toneMapping;
-                    }
-                    
-                    events.fire('camera.params.updated', {
-                        marker: selectedMarker,
-                        params: markerData.cameraParams
-                    });
-                }
-            }
+            console.log('相机色调映射调整功能暂未实现');
         });
 
         // 相机位置和目标调整事件
         events.on('camera.transform', (data: { position?: Vec3, target?: Vec3 }) => {
-            const selectedMarker = scene.getSelectedInspectionMarker?.();
-            if (selectedMarker) {
-                const inspectionPoints = scene.inspectionPoints;
-                const markerData = inspectionPoints.get(selectedMarker.filename);
-                
-                if (markerData && markerData.cameraParams) {
-                    if (data.position) {
-                        markerData.cameraParams.position = {
-                            x: data.position.x,
-                            y: data.position.y,
-                            z: data.position.z
-                        };
-                    }
-                    if (data.target) {
-                        markerData.cameraParams.target = {
-                            x: data.target.x,
-                            y: data.target.y,
-                            z: data.target.z
-                        };
-                    }
-                    
-                    markerData.cameraParams.timestamp = Date.now();
-                    
-                    events.fire('camera.params.updated', {
-                        marker: selectedMarker,
-                        params: markerData.cameraParams
-                    });
-                }
-            }
-        });
-
-        // 切换到选中的巡检点位视角
-        events.on('camera.switchToSelectedMarker', () => {
-            const selectedMarker = scene.getSelectedInspectionMarker();
-            if (selectedMarker) {
-                events.fire('camera.setToMarker', selectedMarker);
-            } else {
-                console.warn('没有选中的巡检点位');
-            }
+            console.log('相机位置和目标调整功能暂未实现');
         });
     };
 

@@ -302,16 +302,6 @@ class Scene {
     }
 
     // get the scene bound
-    // 获取当前选中的巡检点位
-    getSelectedInspectionMarker(): GltfModel | null {
-        const models = this.getElementsByType(ElementType.model) as GltfModel[];
-        return models.find(model => 
-            model.selected && 
-            model.entity.tags.has('inspection')
-        ) || null;
-    }
-
-    // get the scene bound
     get bound() {
         if (this.boundDirty) {
             let valid = false;

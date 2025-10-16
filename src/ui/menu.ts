@@ -44,8 +44,6 @@ class Menu extends Container {
     private snapshotMenuLabel: Label | null = null;
     private inspectionMenuPanel: MenuPanel | null = null;
     private events: Events; // 添加events引用
-    private inspectionPointerDownHandler: (event: Event) => void;
-    private inspectionPointerEnterHandler: () => void;
 
     constructor(events: Events, args = {}) {
         args = {
@@ -274,14 +272,6 @@ class Menu extends Container {
             icon: createSvg(sceneImport),
             onSelect: () => events.fire('inspection.addPoint')
         },
-        {
-            text: '切换到选中视角',
-            icon: createSvg(selectDuplicate), // 暂时使用duplicate图标
-            onSelect: () => {
-                // 获取当前选中的巡检点位并切换相机视角
-                events.fire('camera.switchToSelectedMarker');
-            }
-        },
         this.snapshotMenuItem,
         {
             text: '导出巡检参数',
@@ -418,10 +408,10 @@ class Menu extends Container {
             this.snapshotMenuItem.text = this.snapshotPreviewEnabled ? '快照预览 ✓' : '快照预览';
             
             // 直接更新菜单面板中对应菜单项的文本
-            // 快照预览是第3个菜单项 (index 2)
+            // 快照预览是第2个菜单项 (index 1)
             const menuRows = this.inspectionMenuPanel.dom.querySelectorAll('.menu-row');
-            if (menuRows[2]) {
-                const textLabel = menuRows[2].querySelector('.menu-row-text');
+            if (menuRows[1]) {
+                const textLabel = menuRows[1].querySelector('.menu-row-text');
                 if (textLabel) {
                     textLabel.textContent = this.snapshotMenuItem.text;
                 }
@@ -431,7 +421,7 @@ class Menu extends Container {
 
     // 更新菜单项的DOM显示
     private updateMenuItemDisplay() {
-        // 只更新快照菜单项的图标，不重新创建整个菜单面板
+        // 更新快照菜单项的图标
         this.updateSnapshotMenuText();
     }
 

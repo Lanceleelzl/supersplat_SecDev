@@ -29,6 +29,7 @@ import { EditorUI } from './ui/editor';
 import { ExcelExporter } from './ui/excel-exporter';
 import { SnapshotView } from './ui/snapshot-view';
 
+
 declare global {
     interface LaunchParams {
         readonly files: FileSystemFileHandle[];
@@ -311,15 +312,18 @@ const main = async () => {
     events.on('marker.selected', (model: any) => {
         // 只有开启快照预览时才显示窗口
         if (snapshotPreviewEnabled) {
-            snapshotView.setMarker(model);
+            // 快照预览功能暂未实现
+            console.log('快照预览功能暂未实现');
         }
     });
 
     // 监听视口点击GLB模型事件，转换为marker选择
     events.on('camera.focalPointPicked', (data: any) => {
-        if (data.model && (data.model as any).isInspectionModel && snapshotPreviewEnabled) {
-            // 触发marker选择事件，统一处理逻辑
-            events.fire('marker.selected', data.model);
+        if (data.model && (data.model as any).isInspectionModel) {
+            if (snapshotPreviewEnabled) {
+                // 触发marker选择事件，统一处理逻辑
+                events.fire('marker.selected', data.model);
+            }
         }
     });
 
