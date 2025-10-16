@@ -129,7 +129,13 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
         } finally {
             scene.camera.endOffscreenMode();
             scene.camera.renderOverlays = true;
-            scene.camera.entity.camera.clearColor.set(0, 0, 0, 0);
+            // 恢复正确的背景色而不是设置为透明黑色
+            const bgClr = events.invoke('bgClr');
+            if (bgClr) {
+                scene.camera.entity.camera.clearColor.copy(bgClr);
+            } else {
+                scene.camera.entity.camera.clearColor.set(0.4, 0.4, 0.4, 1);
+            }
 
             events.fire('stopSpinner');
         }
@@ -287,7 +293,13 @@ const registerRenderEvents = (scene: Scene, events: Events) => {
         } finally {
             scene.camera.endOffscreenMode();
             scene.camera.renderOverlays = true;
-            scene.camera.entity.camera.clearColor.set(0, 0, 0, 0);
+            // 恢复正确的背景色而不是设置为透明黑色
+            const bgClr = events.invoke('bgClr');
+            if (bgClr) {
+                scene.camera.entity.camera.clearColor.copy(bgClr);
+            } else {
+                scene.camera.entity.camera.clearColor.set(0.4, 0.4, 0.4, 1);
+            }
             scene.lockedRenderMode = false;
             scene.forceRender = true;       // camera likely moved, finish with normal render
 

@@ -20,11 +20,21 @@ import selectNone from './svg/select-none.svg';
 import selectSeparate from './svg/select-separate.svg';
 import selectUnlock from './svg/select-unlock.svg';
 import logoSvg from './svg/supersplat-logo.svg';
+import kuaizhaoSvg from './svg/kuaizhao.svg';
 
 const createSvg = (svgString: string) => {
-    const decodedStr = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
+    let svgContent: string;
+    
+    // 检查是否是data URL格式
+    if (svgString.startsWith('data:image/svg+xml,')) {
+        svgContent = decodeURIComponent(svgString.substring('data:image/svg+xml,'.length));
+    } else {
+        // 直接使用SVG字符串内容
+        svgContent = svgString;
+    }
+    
     return new Element({
-        dom: new DOMParser().parseFromString(decodedStr, 'image/svg+xml').documentElement
+        dom: new DOMParser().parseFromString(svgContent, 'image/svg+xml').documentElement
     });
 };
 
@@ -33,6 +43,7 @@ class Menu extends Container {
     private snapshotMenuItem: any = null;
     private snapshotMenuLabel: Label | null = null;
     private inspectionMenuPanel: MenuPanel | null = null;
+    private events: Events; // 添加events引用
 
     constructor(events: Events, args = {}) {
         args = {
@@ -41,6 +52,8 @@ class Menu extends Container {
         };
 
         super(args);
+
+        this.events = events; // 保存events引用
 
         const menubar = new Container({
             id: 'menu-bar'
@@ -243,10 +256,10 @@ class Menu extends Container {
             onSelect: async () => await events.invoke('show.videoSettingsDialog')
         }]);
 
-        // 创建快照预览菜单项
+        // 创建快照预览菜单项 - 使用kuaizhao图标，激活时在文本后添加√
         this.snapshotMenuItem = {
-            text: '☐ 快照预览',
-            icon: 'E8B7', // 使用相机图标保持对齐
+            text: '快照预览',
+            icon: createSvg(kuaizhaoSvg), // 使用kuaizhao.svg图标
             onSelect: () => {
                 this.snapshotPreviewEnabled = !this.snapshotPreviewEnabled;
                 this.updateSnapshotMenuText();
@@ -372,15 +385,44 @@ class Menu extends Container {
     }
 
     private updateSnapshotMenuText() {
-        if (this.inspectionMenuPanel) {
-            // 找到快照预览菜单项的文本元素并更新
-            // 快照预览是第二个菜单项 (索引1)
-            const menuItems = this.inspectionMenuPanel.dom.querySelectorAll('.menu-row-text');
-            if (menuItems.length > 1) {
-                const snapshotTextElement = menuItems[1] as HTMLElement;
-                snapshotTextElement.textContent = this.snapshotPreviewEnabled ? '☑ 快照预览' : '☐ 快照预览';
+        console.log('updateSnapshotMenuText called, snapshotPreviewEnabled:', this.snapshotPreviewEnabled);
+        
+        if (this.snapshotMenuItem && this.inspectionMenuPanel) {
+            // 更新菜单项的文本，激活时添加√符号
+            this.snapshotMenuItem.text = this.snapshotPreviewEnabled ? '快照预览 ✓' : '快照预览';
+            
+            // 重新构建整个菜单面板以确保正确显示
+            this.rebuildInspectionMenu();
+            
+            console.log(this.snapshotPreviewEnabled ? 
+                'Snapshot preview enabled - showing checkmark' : 
+                'Snapshot preview disabled - no checkmark');
+        } else {
+            console.error('snapshotMenuItem or inspectionMenuPanel is null');
+        }
+    }
+
+    private rebuildInspectionMenu() {
+        if (this.inspectionMenuPanel && this.snapshotMenuItem) {
+            // 更新快照菜单项的文本，激活时添加√符号
+            this.snapshotMenuItem.text = this.snapshotPreviewEnabled ? '快照预览 ✓' : '快照预览';
+            
+            // 直接更新菜单面板中对应菜单项的文本
+            // 快照预览是第2个菜单项 (index 1)
+            const menuRows = this.inspectionMenuPanel.dom.querySelectorAll('.menu-row');
+            if (menuRows[1]) {
+                const textLabel = menuRows[1].querySelector('.menu-row-text');
+                if (textLabel) {
+                    textLabel.textContent = this.snapshotMenuItem.text;
+                }
             }
         }
+    }
+
+    // 更新菜单项的DOM显示
+    private updateMenuItemDisplay() {
+        // 更新快照菜单项的图标
+        this.updateSnapshotMenuText();
     }
 
     // 公开方法供外部调用

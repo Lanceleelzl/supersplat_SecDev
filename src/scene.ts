@@ -16,6 +16,7 @@ import { Camera } from './camera';
 import { DataProcessor } from './data-processor';
 import { Element, ElementType, ElementTypeList } from './element';
 import { Events } from './events';
+import { GltfModel } from './gltf-model';
 import { InfiniteGrid as Grid } from './infinite-grid';
 import { Outline } from './outline';
 import { PCApp } from './pc-app';
@@ -62,6 +63,24 @@ class Scene {
     contentRoot: Entity;
     cameraRoot: Entity;
 
+    // 巡检点位管理
+    inspectionPoints: Map<string, { 
+        models: GltfModel[], 
+        position: any,
+        cameraParams?: {
+            position: { x: number, y: number, z: number },
+            target: { x: number, y: number, z: number },
+            fov: number,
+            nearClip: number,
+            farClip: number,
+            aperture: number,
+            sensitivity: number,
+            shutter: number,
+            toneMapping: number,
+            timestamp: number
+        }
+    }>;
+
     constructor(
         events: Events,
         config: SceneConfig,
@@ -71,6 +90,9 @@ class Scene {
         this.events = events;
         this.config = config;
         this.canvas = canvas;
+
+        // 初始化巡检点位管理
+        this.inspectionPoints = new Map();
 
         // 配置PlayCanvas应用程序。我们渲染到离屏缓冲区，因此只需要最简单的后缓冲区
         this.app = new PCApp(canvas, { graphicsDevice });
@@ -219,6 +241,9 @@ class Scene {
     start() {
         // start the app
         this.app.start();
+        
+        // 触发scene启动事件
+        this.events.fire('scene.started');
     }
 
     clear() {

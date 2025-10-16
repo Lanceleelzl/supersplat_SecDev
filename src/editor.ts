@@ -909,16 +909,38 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
     // 巡检点计数器和管理器
     let inspectionPointCounter = 1;
-    const inspectionPoints = new Map<string, { models: GltfModel[], position: any }>();
+    const inspectionPoints = new Map<string, { 
+        models: GltfModel[], 
+        position: any,
+        cameraParams?: {
+            position: { x: number, y: number, z: number },
+            target: { x: number, y: number, z: number },
+            fov: number,
+            nearClip: number,
+            farClip: number,
+            aperture?: number,
+            sensitivity?: number,
+            shutter?: number,
+            toneMapping?: number,
+            timestamp: number
+        }
+    }>();
 
     // 添加巡检点事件处理
     events.on('inspection.addPoint', async () => {
         try {
             console.log('开始添加巡检点...');
 
-            // 获取当前相机位置
+            // 获取当前相机位置和参数
             const cameraPosition = scene.camera.entity.getPosition();
+            const cameraTarget = scene.camera.focalPoint;
+            const cameraFov = scene.camera.fov;
+            const cameraNear = scene.camera.near;
+            const cameraFar = scene.camera.far;
+            
             console.log('相机位置:', cameraPosition);
+            console.log('相机目标:', cameraTarget);
+            console.log('相机参数:', { fov: cameraFov, near: cameraNear, far: cameraFar });
 
             // 创建巡检点位名称 - 使用新的命名规则 XJ-1, XJ-2
             const pointName = `XJ-${inspectionPointCounter}`;
@@ -989,12 +1011,24 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
                     console.log('设置模型属性:', markerName, '属于', pointName);
                 }
 
-                // 创建巡检点位记录（不存储位置，因为模型在原点）
+                // 创建巡检点位记录，包含相机参数
                 inspectionPoints.set(pointName, {
                     models: [model as GltfModel],
-                    position: { x: 0, y: 0, z: 0 } // 原点位置
+                    position: { x: 0, y: 0, z: 0 }, // 原点位置
+                    cameraParams: {
+                        position: { x: cameraPosition.x, y: cameraPosition.y, z: cameraPosition.z },
+                        target: { x: cameraTarget.x, y: cameraTarget.y, z: cameraTarget.z },
+                        fov: cameraFov,
+                        nearClip: cameraNear,
+                        farClip: cameraFar,
+                        aperture: scene.camera.entity.camera?.aperture || 16,
+                        sensitivity: scene.camera.entity.camera?.sensitivity || 1000,
+                        shutter: scene.camera.entity.camera?.shutter || 60,
+                        toneMapping: scene.camera.entity.camera?.toneMapping || 0,
+                        timestamp: Date.now()
+                    }
                 });
-                console.log('创建巡检点位记录（原点位置）');
+                console.log('创建巡检点位记录，包含相机参数');
 
                 // 将模型添加到场景（会自动触发 scene.elementAdded 事件）
                 scene.add(model);
@@ -1293,6 +1327,65 @@ const registerEditorEvents = (events: Events, editHistory: EditHistory, scene: S
 
         console.log('导出场景列表巡检点位参数:', allParams);
     });
-};
+        // 相机参数更新事件处理
+        events.on('camera.params.updated', (data: { marker: any, params: any }) => {
+            console.log('相机参数已更新:', data.marker.name, data.params);
+            
+            // 更新巡检点位的相机参数
+            const inspectionPoints = scene.inspectionPoints;
+            const markerData = inspectionPoints.get(data.marker.name);
+            
+            if (markerData) {
+                // 合并新参数到现有参数中
+                markerData.cameraParams = {
+                    ...markerData.cameraParams,
+                    ...data.params,
+                    timestamp: Date.now()
+                };
+                
+                console.log('巡检点位相机参数已更新:', data.marker.name, markerData.cameraParams);
+            } else {
+                console.warn('未找到对应的巡检点位数据:', data.marker.name);
+            }
+            
+            // 触发场景更新
+            scene.forceRender = true;
+        });
+
+        // 相机FOV调整事件
+        events.on('camera.fov', (fov: number) => {
+            console.log('相机FOV调整功能暂未实现');
+        });
+
+        // 相机近远裁剪面调整事件
+        events.on('camera.clip', (data: { near?: number, far?: number }) => {
+            console.log('相机近远裁剪面调整功能暂未实现');
+        });
+
+        // 相机光圈调整事件
+        events.on('camera.aperture', (aperture: number) => {
+            console.log('相机光圈调整功能暂未实现');
+        });
+
+        // 相机感光度调整事件
+        events.on('camera.sensitivity', (sensitivity: number) => {
+            console.log('相机感光度调整功能暂未实现');
+        });
+
+        // 相机快门调整事件
+        events.on('camera.shutter', (shutter: number) => {
+            console.log('相机快门调整功能暂未实现');
+        });
+
+        // 相机色调映射调整事件
+        events.on('camera.toneMapping', (toneMapping: number) => {
+            console.log('相机色调映射调整功能暂未实现');
+        });
+
+        // 相机位置和目标调整事件
+        events.on('camera.transform', (data: { position?: Vec3, target?: Vec3 }) => {
+            console.log('相机位置和目标调整功能暂未实现');
+        });
+    };
 
 export { registerEditorEvents };

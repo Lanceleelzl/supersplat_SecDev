@@ -8,8 +8,31 @@
     border: 1px solid #444;
     border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-    z-index: 1000;
+    z-index: 100; // 与属性面板保持一致的z-index
     font-family: 'Inter', sans-serif;
+    pointer-events: auto; // 确保快照窗口本身可以接收事件
+    
+    // 强制阻止事件穿透
+    * {
+        pointer-events: auto;
+    }
+    
+    // 拖动时的样式
+    &.dragging {
+        user-select: none;
+        cursor: move;
+        z-index: 1000; // 拖动时与属性面板保持一致的z-index
+        
+        // 拖动时阻止所有子元素的事件
+        * {
+            pointer-events: none;
+        }
+        
+        // 但保持标题栏可以接收事件
+        .snapshot-titlebar {
+            pointer-events: auto;
+        }
+    }
 
     &.hidden {
         display: none;
@@ -27,6 +50,11 @@
     border-radius: 8px 8px 0 0;
     cursor: move;
     user-select: none;
+    transition: all 0.2s ease;
+
+    &:hover {
+        background: rgba(60, 60, 60, 0.9);
+    }
 }
 
 .snapshot-title {
@@ -34,6 +62,7 @@
     font-size: 13px;
     font-weight: 500;
     margin: 0;
+    transition: all 0.2s ease;
 }
 
 .snapshot-close {
@@ -67,10 +96,58 @@
     border-radius: 4px;
     background: #1a1a1a;
     cursor: pointer;
-    transition: border-color 0.2s ease;
+}
 
-    &:hover {
-        border-color: #4CAF50;
+// 相机参数控制面板
+.camera-controls {
+    padding: 12px;
+    border-top: 1px solid #555;
+    background: rgba(20, 20, 20, 0.8);
+    border-radius: 0 0 8px 8px;
+
+    .control-group {
+        margin-bottom: 8px;
+        
+        &:last-child {
+            margin-bottom: 0;
+        }
+    }
+
+    .control-label {
+        display: block;
+        color: #ccc;
+        font-size: 11px;
+        margin-bottom: 4px;
+        font-weight: 500;
+    }
+
+    .control-input {
+        width: 100%;
+        background: rgba(40, 40, 40, 0.8);
+        border: 1px solid #555;
+        border-radius: 3px;
+        color: #fff;
+        font-size: 12px;
+        padding: 4px 6px;
+        transition: border-color 0.2s ease;
+
+        &:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+
+        &:hover {
+            border-color: #666;
+        }
+    }
+
+    .control-row {
+        display: flex;
+        gap: 8px;
+        
+        .control-input {
+            flex: 1;
+        }
     }
 }
 
@@ -91,13 +168,6 @@
 
 // 拖拽状态
 .snapshot-view.dragging {
-    opacity: 0.8;
-    transform: scale(0.98);
-    transition: all 0.1s ease;
-}
-
-// 激活状态（选中marker时）
-.snapshot-view.active {
-    border-color: #4CAF50;
-    box-shadow: 0 4px 20px rgba(76, 175, 80, 0.2);
+    opacity: 1;
+    transform: none;
 }

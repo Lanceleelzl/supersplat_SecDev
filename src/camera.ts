@@ -257,8 +257,14 @@ class Camera extends Element {
         const config = this.scene.config;
         const controls = config.controls;
 
-        // configure background
-        this.entity.camera.clearColor.set(0, 0, 0, 0);
+        // configure background - use scene background color
+        const bgClr = this.scene.events.invoke('bgClr');
+        if (bgClr) {
+            this.entity.camera.clearColor.copy(bgClr);
+        } else {
+            // fallback to default gray background
+            this.entity.camera.clearColor.set(0.4, 0.4, 0.4, 1);
+        }
 
         this.minElev = (controls.minPolarAngle * 180) / Math.PI - 90;
         this.maxElev = (controls.maxPolarAngle * 180) / Math.PI - 90;

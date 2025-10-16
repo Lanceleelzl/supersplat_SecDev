@@ -29,6 +29,7 @@ import { EditorUI } from './ui/editor';
 import { ExcelExporter } from './ui/excel-exporter';
 import { SnapshotView } from './ui/snapshot-view';
 
+
 declare global {
     interface LaunchParams {
         readonly files: FileSystemFileHandle[];
@@ -271,18 +272,29 @@ const main = async () => {
     // 初始化Excel导出器
     const excelExporter = new ExcelExporter(events);
 
-    // 创建单一的快照窗口
+    // 初始化文件处理器
+    initFileHandler(scene, events, editorUI.appContainer.dom);
+
+    // 加载异步模型
+    scene.start();
+
+    // 创建单一的快照窗口（在scene启动后）
     const snapshotView = new SnapshotView(events, scene);
     editorUI.canvasContainer.append(snapshotView);
-    snapshotView.hidden = true; // 默认隐藏
+    snapshotView.hide(); // 默认隐藏
 
     // 设置固定位置
-    snapshotView.dom.style.position = 'absolute';
-    snapshotView.dom.style.left = '320px';
-    snapshotView.dom.style.top = '120px';
+    snapshotView.element.style.position = 'absolute';
+    snapshotView.element.style.left = '320px';
+    snapshotView.element.style.top = '120px';
 
     // 快照预览开关状态
     let snapshotPreviewEnabled = false;
+
+    // 添加获取快照预览状态的事件处理器
+    events.function('snapshot.isEnabled', () => {
+        return snapshotPreviewEnabled;
+    });
 
     // 监听快照预览开关切换
     events.on('snapshot.toggle', () => {
@@ -300,16 +312,18 @@ const main = async () => {
     events.on('marker.selected', (model: any) => {
         // 只有开启快照预览时才显示窗口
         if (snapshotPreviewEnabled) {
-            snapshotView.updateMarker(model);
-            snapshotView.show();
+            // 快照预览功能暂未实现
+            console.log('快照预览功能暂未实现');
         }
     });
 
     // 监听视口点击GLB模型事件，转换为marker选择
     events.on('camera.focalPointPicked', (data: any) => {
-        if (data.model && (data.model as any).isInspectionModel && snapshotPreviewEnabled) {
-            // 触发marker选择事件，统一处理逻辑
-            events.fire('marker.selected', data.model);
+        if (data.model && (data.model as any).isInspectionModel) {
+            if (snapshotPreviewEnabled) {
+                // 触发marker选择事件，统一处理逻辑
+                events.fire('marker.selected', data.model);
+            }
         }
     });
 
@@ -317,12 +331,6 @@ const main = async () => {
     events.on('snapshot.close', () => {
         snapshotView.hide();
     });
-
-    // 初始化文件处理器
-    initFileHandler(scene, events, editorUI.appContainer.dom);
-
-    // 加载异步模型
-    scene.start();
 
     // 处理加载参数
     const loadList = url.searchParams.getAll('load');

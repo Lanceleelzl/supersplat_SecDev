@@ -204,6 +204,12 @@ class PointerController {
                 return true;
             }
 
+            // 检查是否点击在快照面板上
+            const snapshotPanel = document.getElementById('snapshot-panel');
+            if (snapshotPanel && snapshotPanel.contains(target)) {
+                return true;
+            }
+
             // 检查是否点击在其他UI面板上（通过CSS类名）
             let element = target;
             while (element && element !== document.body) {
@@ -217,6 +223,7 @@ class PointerController {
                     element.classList.contains('pcui-container') ||
                     element.classList.contains('pcui-element') ||
                     element.classList.contains('menu-panel') ||
+                    element.classList.contains('snapshot-panel') ||
                     (element.id && element.id.includes('panel') && element.id !== 'canvas-container')
                 )) {
                     return true;
@@ -227,8 +234,38 @@ class PointerController {
             return false;
         };
 
+        // 检查事件是否应该被忽略（来自UI面板的事件传播）
+        const shouldIgnoreEvent = (event: globalThis.MouseEvent): boolean => {
+            // 如果事件已经被阻止传播，但仍然到达这里，说明是UI面板内的操作
+            if (event.defaultPrevented) {
+                return true;
+            }
+
+            // 检查事件路径中是否包含UI面板
+            const path = event.composedPath ? event.composedPath() : [];
+            for (const element of path) {
+                if (element instanceof HTMLElement) {
+                    if (element.classList && (
+                        element.classList.contains('snapshot-panel') ||
+                        element.classList.contains('snapshot-view') ||
+                        element.classList.contains('panel') ||
+                        element.id === 'snapshot-panel'
+                    )) {
+                        return true;
+                    }
+                }
+            }
+
+            return isClickOnUI(event);
+        };
+
         // 单击：只有在非拖拽状态且未点击UI时才进行拾取选择
         const click = (event: globalThis.MouseEvent) => {
+            // 检查是否应该忽略这个事件
+            if (shouldIgnoreEvent(event)) {
+                return;
+            }
+
             // 只有真正的点击（非拖拽）且不在UI面板上才触发选择逻辑
             if (!isDragging && !isClickOnUI(event)) {
                 camera.pickFocalPoint(event.offsetX, event.offsetY);

@@ -16,6 +16,11 @@ type MenuItem = {
 const offsetParent = (elem: HTMLElement) : HTMLElement => {
     const parent = elem.parentNode as HTMLElement;
 
+    // 检查parent是否为null或undefined
+    if (!parent || !parent.tagName) {
+        return document.body; // 返回body作为默认值
+    }
+
     return (parent.tagName === 'BODY' || window.getComputedStyle(parent).position !== 'static') ?
         parent :
         offsetParent(parent);
